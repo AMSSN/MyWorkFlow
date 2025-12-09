@@ -1,0 +1,8 @@
+
+模型加密
+./ForelandEncrypt.exe lens3_det_p2_m1_20250630_6049.onnx lens3_det_p2_m1_20250630_6049.onnx.enc
+
+模型解密
+./ForelandDecrypt.exe det.onnx.enc det2.onnx
+
+比较det2.onnx和原来的det.onnx，一模一样，不会有任何的改变

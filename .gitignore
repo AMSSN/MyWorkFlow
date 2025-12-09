@@ -1,0 +1,19 @@
+**/*.zip
+
+
+# PythonProject
+PythonProject/.idea
+**/*.pt
+**/*.onnx
+
+
+# CppProject
+CppProject/3rdparty
+CppProject/3rdparty(other version)
+CppProject\yolov5c\.vs
+CppProject\yolov5c\models
+CppProject\yolov5c\out
+**/.vs
+**/build
+
+

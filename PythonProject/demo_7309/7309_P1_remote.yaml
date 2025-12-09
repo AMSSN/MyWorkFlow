@@ -1,0 +1,33 @@
+
+# /home/lmjia/HongJing/7309P1M1_DetCrop/
+
+#  7309P1_DetCrop   7309P1_DetCrop   7309P1M1_DetCrop    7309P1M1_SegCrop
+train: /home/lmjia/HongJing/7309P1M2_DetCrop/images
+val: /home/lmjia/HongJing/7309P1M2_DetCrop/images
+test:
+
+# M1
+names:
+  0: bujun
+  1: zangwu
+  2: diaomo
+  3: mozha
+  4: waijing
+  5: xinlie
+  6: youyin
+  7: xishang
+
+
+## M2
+#names:
+#  0: xishang
+#  1: duanmian
+#  2: liangxian
+#  3: n3
+#  4: n4
+#  5: n5
+#  6: n6
+#  7: zangwu
+
+
+
