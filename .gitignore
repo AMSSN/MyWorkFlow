@@ -3,17 +3,21 @@
 
 # PythonProject
 PythonProject/.idea
+**/*.pyc
 **/*.pt
 **/*.onnx
+PythonProject/demo_*/*
+# 下次提交ultralytics库
+PythonProject/ultralytics
 
 
 # CppProject
 CppProject/3rdparty
 CppProject/3rdparty(other version)
-CppProject\yolov5c\.vs
-CppProject\yolov5c\models
-CppProject\yolov5c\out
+CppProject/*/build
+CppProject/*/cmake-build-debug
 **/.vs
+**/.idea
 **/build
 
 
