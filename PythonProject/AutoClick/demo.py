@@ -1,3 +1,4 @@
+import re
 import sys
 import os
 import time
@@ -16,47 +17,84 @@ from PySide6.QtCore import Qt, QThread, Signal
 # --------------------------
 # 核心逻辑 (原 waterRPA.py)
 # --------------------------
-
-def mouseClick(clickTimes, lOrR, img, reTry, timeout=60):
+def parse_position(value):
     """
-    reTry: 1 (一次), -1 (无限), >1 (指定次数)
-    timeout: 超时时间(秒)，默认60秒。防止无限卡死。
+    解析输入值：返回 (is_coord, x, y) 或 (False, image_path)
+    支持格式：
+    - 图片路径: "1.png", "D:/img/test.jpg"
+    - 坐标: "(100,200)", " ( 300 , 400 ) "
+    """
+    # 检查是否为坐标格式 (x,y)
+    coord_match = re.match(r'\(\s*(\d+)\s*,\s*(\d+)\s*\)', str(value).strip())
+    if coord_match:
+        x, y = int(coord_match.group(1)), int(coord_match.group(2))
+        return True, x, y
+
+    # 否则视为图片路径
+    return False, str(value)
+
+
+def mouseClick(clickTimes, lOrR, value, reTry, timeout=60):
+    """
+    扩展版点击函数，支持图片匹配和坐标点击
+    value: 可以是图片路径 或 坐标字符串如 "(100,200)"
     """
     start_time = time.time()
 
+    # 解析输入值
+    is_coord, *pos = parse_position(value)
+
     if reTry == 1:
         while True:
-            # 检查超时
             if timeout and (time.time() - start_time > timeout):
-                print(f"等待图片 {img} 超时 ({timeout}秒)")
-                return  # 或者抛出异常
-
-            try:
-                location = pyautogui.locateCenterOnScreen(img, confidence=0.9)
-                if location is not None:
-                    pyautogui.click(location.x, location.y, clicks=clickTimes, interval=0.2, duration=0.2, button=lOrR)
-                    break
-            except pyautogui.ImageNotFoundException:
-                pass  # 没找到，继续重试
-
-            print("未找到匹配图片,0.1秒后重试")
-            time.sleep(0.1)
-    elif reTry == -1:
-        while True:
-            # 无限重试通常也需要某种中断机制，这里保留原意但增加超时保护（可选）
-            # 如果确实想“死等”，可以把 timeout 设为 None
-            if timeout and (time.time() - start_time > timeout):
-                print(f"等待图片 {img} 超时 ({timeout}秒)")
+                print(f"等待目标 {value} 超时 ({timeout}秒)")
                 return
 
             try:
-                location = pyautogui.locateCenterOnScreen(img, confidence=0.9)
-                if location is not None:
-                    pyautogui.click(location.x, location.y, clicks=clickTimes, interval=0.2, duration=0.2, button=lOrR)
+                if is_coord:
+                    x, y = pos
+                    pyautogui.click(x, y, clicks=clickTimes, interval=0.2, duration=0.2, button=lOrR)
+                    print(f"点击坐标: ({x}, {y})")
+                else:
+                    img_path = pos[0]
+                    location = pyautogui.locateCenterOnScreen(img_path, confidence=0.9)
+                    if location is not None:
+                        pyautogui.click(location.x, location.y, clicks=clickTimes, interval=0.2, duration=0.2,
+                                        button=lOrR)
+                        print(f"点击图片: {img_path}")
+                break
             except pyautogui.ImageNotFoundException:
                 pass
+            except Exception as e:
+                print(f"点击失败: {e}")
+                return
+
+            print("未找到匹配目标,0.1秒后重试")
+            time.sleep(0.1)
+
+    elif reTry == -1:
+        while True:
+            if timeout and (time.time() - start_time > timeout):
+                print(f"等待目标 {value} 超时 ({timeout}秒)")
+                return
+
+            try:
+                if is_coord:
+                    x, y = pos
+                    pyautogui.click(x, y, clicks=clickTimes, interval=0.2, duration=0.2, button=lOrR)
+                else:
+                    img_path = pos[0]
+                    location = pyautogui.locateCenterOnScreen(img_path, confidence=0.9)
+                    if location is not None:
+                        pyautogui.click(location.x, location.y, clicks=clickTimes, interval=0.2, duration=0.2,
+                                        button=lOrR)
+            except pyautogui.ImageNotFoundException:
+                pass
+            except Exception as e:
+                print(f"点击失败: {e}")
 
             time.sleep(0.1)
+
     elif reTry > 1:
         i = 1
         while i < reTry + 1:
@@ -65,13 +103,21 @@ def mouseClick(clickTimes, lOrR, img, reTry, timeout=60):
                 return
 
             try:
-                location = pyautogui.locateCenterOnScreen(img, confidence=0.9)
-                if location is not None:
-                    pyautogui.click(location.x, location.y, clicks=clickTimes, interval=0.2, duration=0.2, button=lOrR)
-                    print("重复")
-                    i += 1
+                if is_coord:
+                    x, y = pos
+                    pyautogui.click(x, y, clicks=clickTimes, interval=0.2, duration=0.2, button=lOrR)
+                else:
+                    img_path = pos[0]
+                    location = pyautogui.locateCenterOnScreen(img_path, confidence=0.9)
+                    if location is not None:
+                        pyautogui.click(location.x, location.y, clicks=clickTimes, interval=0.2, duration=0.2,
+                                        button=lOrR)
+                        print("重复点击")
+                i += 1
             except pyautogui.ImageNotFoundException:
                 pass
+            except Exception as e:
+                print(f"点击失败: {e}")
 
             time.sleep(0.1)
 
@@ -301,7 +347,7 @@ class TaskRow(QFrame):
             self.file_btn.setVisible(True)
             self.file_btn.setText("选择图片")
             self.retry_input.setVisible(True)
-            self.value_input.setPlaceholderText("图片路径")
+            self.value_input.setPlaceholderText("图片路径 或 坐标如 (500,300)")
         # 输入 (4)
         elif cmd_type == 4.0:
             self.file_btn.setVisible(False)
