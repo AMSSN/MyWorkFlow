@@ -1,0 +1,127 @@
+[
+    {
+        "type": 10.0,
+        "value": "E:/CodePython/MyWorkFlow/PythonProject/AutoClick/resource/shouhuo.png",
+        "retry": 1
+    },
+    {
+        "type": 5.0,
+        "value": "10",
+        "retry": 1
+    },
+    {
+        "type": 1.0,
+        "value": "E:/CodePython/MyWorkFlow/PythonProject/AutoClick/resource/shouhuo.png",
+        "retry": 1
+    },
+    {
+        "type": 5.0,
+        "value": "5",
+        "retry": 1
+    },
+    {
+        "type": 1.0,
+        "value": "(554,947)",
+        "retry": 1
+    },
+    {
+        "type": 1.0,
+        "value": "(554,1067)",
+        "retry": 1
+    },
+    {
+        "type": 1.0,
+        "value": "(607,980)",
+        "retry": 1
+    },
+    {
+        "type": 1.0,
+        "value": "(607,1100)",
+        "retry": 1
+    },
+    {
+        "type": 1.0,
+        "value": "(666,1000)",
+        "retry": 1
+    },
+    {
+        "type": 1.0,
+        "value": "(666,1120)",
+        "retry": 1
+    },
+    {
+        "type": 1.0,
+        "value": "(723,1040)",
+        "retry": 1
+    },
+    {
+        "type": 1.0,
+        "value": "(723,1160)",
+        "retry": 1
+    },
+    {
+        "type": 1.0,
+        "value": "(496,976)",
+        "retry": 1
+    },
+    {
+        "type": 1.0,
+        "value": "(496,1096)",
+        "retry": 1
+    },
+    {
+        "type": 1.0,
+        "value": "(550,1000)",
+        "retry": 1
+    },
+    {
+        "type": 1.0,
+        "value": "(550,1120)",
+        "retry": 1
+    },
+    {
+        "type": 1.0,
+        "value": "(610,1030)",
+        "retry": 1
+    },
+    {
+        "type": 1.0,
+        "value": "(610,1150)",
+        "retry": 1
+    },
+    {
+        "type": 2.0,
+        "value": "(665,1060)",
+        "retry": 1
+    },
+    {
+        "type": 1.0,
+        "value": "(665,1180)",
+        "retry": 1
+    },
+    {
+        "type": 10.9,
+        "value": "",
+        "retry": 1
+    },
+    {
+        "type": 1.0,
+        "value": "E:/CodePython/MyWorkFlow/PythonProject/AutoClick/resource/chucao.png",
+        "retry": 1
+    },
+    {
+        "type": 1.0,
+        "value": "E:/CodePython/MyWorkFlow/PythonProject/AutoClick/resource/chuchong.png",
+        "retry": 1
+    },
+    {
+        "type": 1.0,
+        "value": "E:/CodePython/MyWorkFlow/PythonProject/AutoClick/resource/jiaoshui.png",
+        "retry": 1
+    },
+    {
+        "type": 5.0,
+        "value": "3",
+        "retry": 1
+    }
+]

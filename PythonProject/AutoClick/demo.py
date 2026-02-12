@@ -1,3 +1,4 @@
+import re
 import sys
 import os
 import time
@@ -10,69 +11,76 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                                QPushButton, QLabel, QComboBox, QLineEdit, QScrollArea,
                                QFileDialog, QTextEdit, QMessageBox, QFrame)
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import QThread, Signal
 
-
+global_confidence = 0.6
 # --------------------------
 # 核心逻辑 (原 waterRPA.py)
 # --------------------------
-
-def mouseClick(clickTimes, lOrR, img, reTry, timeout=60):
+def parse_position(value):
     """
-    reTry: 1 (一次), -1 (无限), >1 (指定次数)
-    timeout: 超时时间(秒)，默认60秒。防止无限卡死。
+    解析输入值：返回 (is_coord, x, y) 或 (False, image_path)
+    支持格式：
+    - 图片路径: "1.png", "D:/img/test.jpg"
+    - 坐标: "(100,200)", " ( 300 , 400 ) "
+    """
+    # 检查是否为坐标格式 (x,y)
+    coord_match = re.match(r'\(\s*(\d+)\s*,\s*(\d+)\s*\)', str(value).strip())
+    if coord_match:
+        x, y = int(coord_match.group(1)), int(coord_match.group(2))
+        return True, x, y
+
+    # 否则视为图片路径
+    return False, str(value)
+
+
+def mouseClick(clickTimes, lOrR, value, reTry, timeout=60):
+    """
+    扩展版点击函数，支持图片匹配和坐标点击
+    value: 可以是图片路径 或 坐标字符串如 "(100,200)"
     """
     start_time = time.time()
 
-    if reTry == 1:
-        while True:
-            # 检查超时
-            if timeout and (time.time() - start_time > timeout):
-                print(f"等待图片 {img} 超时 ({timeout}秒)")
-                return  # 或者抛出异常
+    # 解析输入值
+    is_coord, *pos = parse_position(value)
 
-            try:
-                location = pyautogui.locateCenterOnScreen(img, confidence=0.9)
+    attempt_count = 0
+    max_attempts = None if reTry == -1 else (1 if reTry == 1 else reTry)
+
+    while max_attempts is None or attempt_count < max_attempts:
+        if timeout and (time.time() - start_time > timeout):
+            print(f"等待目标 {value} 超时 ({timeout}秒)")
+            return
+
+        try:
+            if is_coord:
+                x, y = pos[0], pos[1]
+                pyautogui.click(x, y, clicks=clickTimes, interval=0.2, duration=0.2, button=lOrR)
+                print(f"点击坐标: ({x}, {y})")
+                attempt_count += 1
+                if reTry != -1:
+                    break  # reTry=1 只执行一次成功即退出
+            else:
+                img_path = pos[0]
+                location = pyautogui.locateCenterOnScreen(img_path, confidence=global_confidence)
                 if location is not None:
-                    pyautogui.click(location.x, location.y, clicks=clickTimes, interval=0.2, duration=0.2, button=lOrR)
-                    break
-            except pyautogui.ImageNotFoundException:
-                pass  # 没找到，继续重试
+                    pyautogui.click(location.x, location.y, clicks=clickTimes, interval=0.2, duration=0.2,
+                                    button=lOrR)
+                    print(f"点击图片: {img_path}")
+                    attempt_count += 1
+                    if reTry != -1:
+                        break  # 成功则退出
+        except pyautogui.ImageNotFoundException:
+            pass
+        except Exception as e:
+            print(f"点击失败: {e}")
+            return
 
-            print("未找到匹配图片,0.1秒后重试")
-            time.sleep(0.1)
-    elif reTry == -1:
-        while True:
-            # 无限重试通常也需要某种中断机制，这里保留原意但增加超时保护（可选）
-            # 如果确实想“死等”，可以把 timeout 设为 None
-            if timeout and (time.time() - start_time > timeout):
-                print(f"等待图片 {img} 超时 ({timeout}秒)")
-                return
-
-            try:
-                location = pyautogui.locateCenterOnScreen(img, confidence=0.9)
-                if location is not None:
-                    pyautogui.click(location.x, location.y, clicks=clickTimes, interval=0.2, duration=0.2, button=lOrR)
-            except pyautogui.ImageNotFoundException:
-                pass
-
-            time.sleep(0.1)
-    elif reTry > 1:
-        i = 1
-        while i < reTry + 1:
-            if timeout and (time.time() - start_time > timeout):
-                print(f"操作超时 ({timeout}秒)")
-                return
-
-            try:
-                location = pyautogui.locateCenterOnScreen(img, confidence=0.9)
-                if location is not None:
-                    pyautogui.click(location.x, location.y, clicks=clickTimes, interval=0.2, duration=0.2, button=lOrR)
-                    print("重复")
-                    i += 1
-            except pyautogui.ImageNotFoundException:
-                pass
-
+        if reTry != -1:
+            break  # 非无限重试模式下，无论成败都最多试一次（配合外层超时）
+        else:
+            # 无限重试模式下继续循环
+            print("未找到匹配目标,0.1秒后重试")
             time.sleep(0.1)
 
 
@@ -87,18 +95,15 @@ def mouseMove(img, reTry, timeout=60):
             return
 
         try:
-            location = pyautogui.locateCenterOnScreen(img, confidence=0.9)
+            location = pyautogui.locateCenterOnScreen(img, confidence=global_confidence)
             if location is not None:
                 pyautogui.moveTo(location.x, location.y, duration=0.2)
-                break
+                return
         except pyautogui.ImageNotFoundException:
             pass
 
         print("未找到匹配图片,0.1秒后重试")
         time.sleep(0.1)
-        if reTry == 1:  # 如果只试一次且没找到，直接退出（或者遵循原逻辑死循环？原mouseClick逻辑是reTry=1也会死循环直到找到，这里保持一致）
-            pass
-            # 注意：原mouseClick中 reTry=1 也是 while True，直到找到。这里保持一致。
 
 
 class RPAEngine:
@@ -111,64 +116,122 @@ class RPAEngine:
         self.is_running = False
 
     def run_tasks(self, tasks, loop_forever=False, callback_msg=None):
-        """
-        tasks: list of dict, format:
-        [
-            {"type": 1.0, "value": "1.png", "retry": 1},
-            ...
-        ]
-        """
         self.is_running = True
         self.stop_requested = False
 
         try:
-            while True:
-                for idx, task in enumerate(tasks):
+            while True:  # 外层循环控制是否持续运行
+                condition_stack = []  # 存储条件状态 [(type, condition_met), ...]
+                i = 0
+
+                while i < len(tasks):  # 内层循环执行单次任务列表
                     if self.stop_requested:
-                        if callback_msg: callback_msg("任务已停止")
+                        if callback_msg:
+                            callback_msg("任务已停止")
                         return
 
+                    task = tasks[i]
                     cmd_type = task.get("type")
                     cmd_value = task.get("value")
                     retry = task.get("retry", 1)
 
-                    if callback_msg:
-                        callback_msg(f"执行步骤 {idx + 1}: 类型={cmd_type}, 内容={cmd_value}")
+                    # 检查是否跳过当前任务（在未满足的 if 块中）
+                    skip_current = False
+                    current_depth = len(condition_stack)
+                    if current_depth > 0:
+                        for depth in range(current_depth - 1, -1, -1):
+                            block_type, condition_met = condition_stack[depth]
+                            if block_type == 10.0 and not condition_met:
+                                if cmd_type not in [10.1, 10.9]:
+                                    skip_current = True
+                                    break
+                    if skip_current:
+                        i += 1
+                        continue
 
-                    if cmd_type == 1.0:  # 单击左键
+                    if callback_msg:
+                        callback_msg(f"执行步骤 {i + 1}: 类型={cmd_type}, 内容={cmd_value}")
+
+                    # --- 条件判断 ---
+                    if cmd_type == 10.0:  # 如果存在图片则执行
+                        try:
+                            location = pyautogui.locateOnScreen(cmd_value, confidence=global_confidence)
+                            condition_met = location is not None
+                        except:
+                            condition_met = False
+                        condition_stack.append((10.0, condition_met))
+                        if not condition_met:
+                            callback_msg(f"条件不满足: 未找到图片 {cmd_value}")
+
+                    elif cmd_type == 10.1:  # 否则
+                        if condition_stack and condition_stack[-1][0] == 10.0:
+                            parent_type, parent_condition = condition_stack[-1]
+                            condition_stack[-1] = (10.0, not parent_condition)
+                        else:
+                            callback_msg("错误: '否则'前无匹配的'如果'")
+
+                    elif cmd_type == 10.9:  # 结束条件
+                        if condition_stack and condition_stack[-1][0] in [10.0]:
+                            condition_stack.pop()
+                        else:
+                            callback_msg("错误: 缺少对应的'如果'语句")
+
+                    # --- 循环 ---
+                    elif cmd_type == 11.0:  # 循环开始
+                        try:
+                            loop_count = int(float(cmd_value)) if cmd_value.strip() else 1
+                            condition_stack.append((11.0, loop_count))
+                        except:
+                            callback_msg("循环次数格式错误，默认执行1次")
+                            condition_stack.append((11.0, 1))
+
+                    elif cmd_type == 11.9:  # 结束循环
+                        if condition_stack and condition_stack[-1][0] == 11.0:
+                            loop_type, remaining = condition_stack.pop()
+                            if remaining > 1:
+                                target_i = self._find_prev_loop_start(tasks, i)
+                                if target_i is not None:
+                                    i = target_i
+                                    condition_stack.append((11.0, remaining - 1))
+                        else:
+                            callback_msg("错误: 缺少对应的'循环执行'")
+
+                    # --- 动作指令 ---
+                    elif cmd_type == 1.0:
                         mouseClick(1, "left", cmd_value, retry)
-                        if callback_msg: callback_msg(f"单击左键: {cmd_value}")
+                        if callback_msg:
+                            callback_msg(f"单击左键: {cmd_value}")
 
                     elif cmd_type == 2.0:  # 双击左键
                         mouseClick(2, "left", cmd_value, retry)
-                        if callback_msg: callback_msg(f"双击左键: {cmd_value}")
+                        if callback_msg:
+                            callback_msg(f"双击左键: {cmd_value}")
 
                     elif cmd_type == 3.0:  # 右键
                         mouseClick(1, "right", cmd_value, retry)
-                        if callback_msg: callback_msg(f"右键单击: {cmd_value}")
+                        if callback_msg:
+                            callback_msg(f"右键单击: {cmd_value}")
 
                     elif cmd_type == 4.0:  # 输入
                         pyperclip.copy(str(cmd_value))
                         pyautogui.hotkey('ctrl', 'v')
                         time.sleep(0.5)
-                        if callback_msg: callback_msg(f"输入文本: {cmd_value}")
+                        if callback_msg:
+                            callback_msg(f"输入文本: {cmd_value}")
 
                     elif cmd_type == 5.0:  # 等待
                         sleep_time = float(cmd_value)
                         time.sleep(sleep_time)
-                        if callback_msg: callback_msg(f"等待 {sleep_time} 秒")
+                        if callback_msg:
+                            callback_msg(f"等待 {sleep_time} 秒")
 
                     elif cmd_type == 6.0:  # 滚轮
                         scroll_val = int(cmd_value)
                         pyautogui.scroll(scroll_val)
-                        if callback_msg: callback_msg(f"滚轮滑动 {scroll_val}")
+                        if callback_msg:
+                            callback_msg(f"滚轮滑动 {scroll_val}")
 
-                    elif cmd_type == 7.0:  # 系统按键 (组合键)
-                        # keys = str(cmd_value).lower().split('+')
-                        # # 去除空格
-                        # keys = [k.strip() for k in keys]
-                        # pyautogui.hotkey(*keys)
-                        # if callback_msg: callback_msg(f"按键组合: {cmd_value}")
+                    elif cmd_type == 7.0:
                         keys_str = str(cmd_value).strip()
                         keys = [k.strip().lower() for k in keys_str.split('+')]
 
@@ -179,11 +242,13 @@ class RPAEngine:
                             # 多个键使用 hotkey（修饰键组合，如 ctrl+s）
                             pyautogui.hotkey(*keys)
 
-                        if callback_msg: callback_msg(f"按键输入: {cmd_value}")
+                        if callback_msg:
+                            callback_msg(f"按键输入: {cmd_value}")
 
                     elif cmd_type == 8.0:  # 鼠标悬停
                         mouseMove(cmd_value, retry)
-                        if callback_msg: callback_msg(f"鼠标悬停: {cmd_value}")
+                        if callback_msg:
+                            callback_msg(f"鼠标悬停: {cmd_value}")
 
                     elif cmd_type == 9.0:  # 截图保存
                         path = str(cmd_value)
@@ -198,20 +263,41 @@ class RPAEngine:
                                 filename += '.png'
 
                         pyautogui.screenshot(filename)
-                        if callback_msg: callback_msg(f"截图已保存: {filename}")
+                        if callback_msg:
+                            callback_msg(f"截图已保存: {filename}")
 
+                    i += 1  # 正常前进
+
+                # 如果不是无限循环模式，则退出外层循环
                 if not loop_forever:
                     break
 
-                if callback_msg: callback_msg("等待 0.1 秒进入下一轮循环...")
+                # 如果是无限循环模式，短暂休眠后继续下一轮
+                if callback_msg:
+                    callback_msg("等待 0.1 秒进入下一轮循环...")
                 time.sleep(0.1)
 
         except Exception as e:
-            if callback_msg: callback_msg(f"执行出错: {e}")
+            if callback_msg:
+                callback_msg(f"执行出错: {e}")
             traceback.print_exc()
         finally:
             self.is_running = False
-            if callback_msg: callback_msg("任务结束")
+            if callback_msg:
+                callback_msg("任务结束")
+
+    def _find_prev_loop_start(self, tasks, current_pos):
+        """向前查找最近的循环开始"""
+        nesting = 0
+        for i in range(current_pos - 1, -1, -1):
+            cmd_type = tasks[i].get("type")
+            if cmd_type == 11.9:  # 遇到内层循环结束
+                nesting += 1
+            elif cmd_type == 11.0:  # 遇到循环开始
+                if nesting == 0:
+                    return i
+                nesting -= 1
+        return None  # 未找到合法起点
 
 
 # --------------------------
@@ -228,7 +314,13 @@ CMD_TYPES = {
     "滚轮滑动": 6.0,
     "系统按键": 7.0,
     "鼠标悬停": 8.0,
-    "截图保存": 9.0
+    "截图保存": 9.0,
+    # 流程控制语句
+    "如果存在图片则执行": 10.0,  # 条件判断开始
+    "否则": 10.1,  # else分支
+    "结束条件": 10.9,  # if结束
+    "循环执行": 11.0,  # 循环开始
+    "结束循环": 11.9  # 循环结束
 }
 
 CMD_TYPES_REV = {v: k for k, v in CMD_TYPES.items()}
@@ -296,38 +388,35 @@ class TaskRow(QFrame):
     def on_type_changed(self, text):
         cmd_type = CMD_TYPES[text]
 
-        # 图片相关操作 (1, 2, 3, 8)
-        if cmd_type in [1.0, 2.0, 3.0, 8.0]:
+        # 图片相关操作
+        if cmd_type in [1.0, 2.0, 3.0, 8.0, 10.0]:  # 包含条件判断
             self.file_btn.setVisible(True)
-            self.file_btn.setText("选择图片")
+            self.file_btn.setText("选择图片" if cmd_type != 10.0 else "选择条件图片")
+            self.retry_input.setVisible(cmd_type not in [10.0, 10.1, 10.9])
+            self.value_input.setPlaceholderText("图片路径" if cmd_type != 10.0 else "用于判断的图片")
+
+            # 输入/等待等简单值
+        elif cmd_type in [4.0, 5.0, 6.0, 7.0, 11.0]:  # 循环需要输入次数
+            self.file_btn.setVisible(False)
+            self.retry_input.setVisible(False)
+            placeholder_map = {
+                5.0: "等待秒数 (如 1.5)",
+                11.0: "循环次数 (如 3, 留空为1次)"
+            }
+            self.value_input.setPlaceholderText(placeholder_map.get(cmd_type, "参数值"))
+
+            # 结构关键字（否则、结束等）
+        elif cmd_type in [10.1, 10.9, 11.9]:
+            self.file_btn.setVisible(False)
+            self.retry_input.setVisible(False)
+            self.value_input.setPlaceholderText("此为结构标记，无需输入值")
+            self.value_input.setEnabled(False)
+            self.value_input.setText("")
+        else:
+            self.file_btn.setVisible(False)
             self.retry_input.setVisible(True)
-            self.value_input.setPlaceholderText("图片路径")
-        # 输入 (4)
-        elif cmd_type == 4.0:
-            self.file_btn.setVisible(False)
-            self.retry_input.setVisible(False)
-            self.value_input.setPlaceholderText("请输入要发送的文本")
-        # 等待 (5)
-        elif cmd_type == 5.0:
-            self.file_btn.setVisible(False)
-            self.retry_input.setVisible(False)
-            self.value_input.setPlaceholderText("等待秒数 (如 1.5)")
-        # 滚轮 (6)
-        elif cmd_type == 6.0:
-            self.file_btn.setVisible(False)
-            self.retry_input.setVisible(False)
-            self.value_input.setPlaceholderText("滚动距离 (正数向上，负数向下)")
-        # 系统按键 (7)
-        elif cmd_type == 7.0:
-            self.file_btn.setVisible(False)
-            self.retry_input.setVisible(False)
-            self.value_input.setPlaceholderText("按键 (如 enter, down)、组合键 (如 ctrl+s, alt+tab)")
-        # 截图保存 (9)
-        elif cmd_type == 9.0:
-            self.file_btn.setVisible(True)
-            self.file_btn.setText("选择保存文件夹")
-            self.retry_input.setVisible(False)
-            self.value_input.setPlaceholderText("保存目录 (如 D:\\Screenshots)")
+            self.value_input.setPlaceholderText("参数值")
+            self.value_input.setEnabled(True)
 
     def set_data(self, data):
         """用于回填数据"""
@@ -356,7 +445,9 @@ class TaskRow(QFrame):
 
         # 其他图片操作 (1, 2, 3, 8) -> 打开文件对话框
         else:
-            filename, _ = QFileDialog.getOpenFileName(self, "选择图片", os.getcwd(), "Image Files (*.png *.jpg *.bmp)")
+            filename, _ = QFileDialog.getOpenFileName(
+                self, "选择图片", os.getcwd(), "Image Files (*.png *.jpg *.bmp)"
+            )
             if filename:
                 self.value_input.setText(filename)
 
@@ -364,19 +455,12 @@ class TaskRow(QFrame):
         cmd_type = CMD_TYPES[self.type_combo.currentText()]
         value = self.value_input.text()
 
-        # 数据校验与转换
-        try:
-            if cmd_type in [5.0, 6.0]:
-                # 尝试转换为数字，如果失败可能会在运行时报错，这里简单处理
-                if not value: value = "0"
-
-            retry = 1
-            if self.retry_input.isVisible():
-                retry_text = self.retry_input.text()
-                if retry_text:
-                    retry = int(retry_text)
-        except ValueError:
-            pass  # 保持默认
+        retry = 1
+        if self.retry_input.isVisible() and self.retry_input.text().strip():
+            try:
+                retry = int(self.retry_input.text())
+            except ValueError:
+                pass
 
         return {
             "type": cmd_type,
@@ -472,12 +556,7 @@ class RPAWindow(QMainWindow):
             row_widget.deleteLater()
 
     def save_config(self):
-        tasks = []
-        for row in self.rows:
-            data = row.get_data()
-            # 允许保存空值，方便后续编辑
-            tasks.append(data)
-
+        tasks = [row.get_data() for row in self.rows]
         if not tasks:
             QMessageBox.warning(self, "警告", "没有可保存的配置")
             return
@@ -521,9 +600,15 @@ class RPAWindow(QMainWindow):
 
     def start_task(self):
         tasks = []
+        # 定义不需要参数的操作类型
+        no_param_types = {10.1, 10.9, 11.9}  # "否则"、"结束条件"、"结束循环"
+
         for row in self.rows:
             data = row.get_data()
-            if not data['value']:
+            cmd_type = data.get("type")
+            cmd_value = data.get("value")
+            # 只对需要参数且参数为空的情况进行检查
+            if cmd_type not in no_param_types and not cmd_value:
                 QMessageBox.warning(self, "警告", "请检查有空参数的指令！")
                 return
             tasks.append(data)
