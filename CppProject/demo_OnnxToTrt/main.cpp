@@ -9,8 +9,8 @@ int main() {
     onnx_to_trt::ConversionConfig config;
     config.onnxPath = "yolo26_P2.onnx";
     config.enginePath = "yolo26_P2.engine";
-    config.inferWidth = 1280;
-    config.inferHeight = 1280;
+//    config.inferWidth = 1280;
+//    config.inferHeight = 1280;
     config.precision = onnx_to_trt::PrecisionType::FP16;
     config.gpuIndex = 0;
     config.inputName = "images";

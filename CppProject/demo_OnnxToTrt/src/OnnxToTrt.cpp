@@ -75,13 +75,21 @@ namespace onnx_to_trt {
             builder->destroy();
             return false;
         }
-        // 构建配置并设置 profile
-        IOptimizationProfile *profile = builder->createOptimizationProfile();
-        // 设置最小、最优、最大尺寸（三者可相同表示静态）
-        profile->setDimensions(trtConfig.inputName, nvinfer1::OptProfileSelector::kMIN, trtConfig.minShape.toDims());
-        profile->setDimensions(trtConfig.inputName, nvinfer1::OptProfileSelector::kOPT, trtConfig.optShape.toDims());
-        profile->setDimensions(trtConfig.inputName, nvinfer1::OptProfileSelector::kMAX, trtConfig.maxShape.toDims());
-        config->addOptimizationProfile(profile);
+
+        // 没有指定infer size时，自动设置动态
+        if (trtConfig.inferWidth == -1 && trtConfig.inferHeight == -1) {
+            // 构建配置并设置 profile
+            IOptimizationProfile *profile = builder->createOptimizationProfile();
+            // 设置最小、最优、最大尺寸（三者可相同表示静态）
+            profile->setDimensions(trtConfig.inputName, nvinfer1::OptProfileSelector::kMIN,
+                                   trtConfig.minShape.toDims());
+            profile->setDimensions(trtConfig.inputName, nvinfer1::OptProfileSelector::kOPT,
+                                   trtConfig.optShape.toDims());
+            profile->setDimensions(trtConfig.inputName, nvinfer1::OptProfileSelector::kMAX,
+                                   trtConfig.maxShape.toDims());
+            config->addOptimizationProfile(profile);
+        }
+
 
         // 6. 设置精度
         if (trtConfig.precision == PrecisionType::FP16) {
