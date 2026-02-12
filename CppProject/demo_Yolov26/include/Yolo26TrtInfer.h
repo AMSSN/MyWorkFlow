@@ -1,0 +1,14 @@
+//
+// Created by M on 2026/2/12.
+//
+
+#ifndef DEMO_YOLOV26_YOLO26TRTINFER_H
+#define DEMO_YOLOV26_YOLO26TRTINFER_H
+
+
+class Yolo26TrtInfer {
+
+};
+
+
+#endif //DEMO_YOLOV26_YOLO26TRTINFER_H
