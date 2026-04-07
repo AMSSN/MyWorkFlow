@@ -1,0 +1,450 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hdevelop file_version="1.2" halcon_version="22.05.0.0">
+<procedure name="main">
+<interface/>
+<body>
+<c>* 'measure_length1'：区域，垂直于边界的测量区域的一半长度</c>
+<c>*'measure_length2'：区域，相切于边界的测量区域的一半长度</c>
+<c>*'measure_distance'：区域，两个测量区域中心之间的距离</c>
+<c>*'num_measures'：区域,测量区域数</c>
+<c>*'measure_sigma'：测量，用于平滑的高斯函数的 Sigma</c>
+<c>* 'measure_threshold'：测量,最小边缘幅度阈值</c>
+<c>*'measure_select'：测量，边缘端点的选择('last'、'first')</c>
+<c>*'measure_transition'：测量，方向('all'、'negative'、 'positive')</c>
+<c>*'measure_interpolation'：测量，插值类型</c>
+<c>*'min_score'：拟合，最小分数</c>
+<c>*'num_instances'：拟合，成功拟合实例的最大数量</c>
+<c>*'distance_threshold'：拟合，距离阈值 </c>
+<c></c>
+<c></c>
+<c>*****8888888888888888888888888888888888888888888888888888888888888888888888888888888888888888   找线</c>
+<c></c>
+<l>dev_get_window (WindowHandle)</l>
+<l>read_image (Image, 'E:/TEST/偏振片测试/测试图片.jpg')</l>
+<l>rotate_image (Image, Image, 0, 'constant')</l>
+<l>rgb1_to_gray (Image, Image)</l>
+<l>get_image_size (Image, Width, Height)</l>
+<l>dev_open_window (0, 0, Width/10, Height/10, 'black', WindowHandle)</l>
+<l>dev_display (Image)</l>
+<l>dev_set_line_width (2)</l>
+<l>dev_set_color ('blue')</l>
+<l>draw_line (WindowHandle, Row11, Column11, Row2, Column2)</l>
+<l>LineParam:=[Row11, Column11, Row2, Column2]</l>
+<c></c>
+<c>*创建计量句柄</c>
+<l>create_metrology_model (MetrologyHandle)</l>
+<c>*句柄关联的坐标位置</c>
+<l>set_metrology_model_image_size (MetrologyHandle, Width, Height)</l>
+<c>*添加测量模型对象 有线 矩形 圆，椭圆</c>
+<l>add_metrology_object_generic (MetrologyHandle, 'line', LineParam, 40, 5, 1, 40, [], [], Index)</l>
+<c>*设置找线方式，negative 从白到黑   positive 从黑到白   all表示两者都包括</c>
+<l>set_metrology_object_param (MetrologyHandle, 'all', 'measure_transition', 'positive')</l>
+<c>*设置测量区域的个数，也就是那种很多的小矩形框的数量</c>
+<l>set_metrology_object_param (MetrologyHandle, 'all', 'num_measures', 10)</l>
+<c>*两个测量区域矩形中心点的距离   如果测量的长度一定，'measure_distance'的值会影响'num_measures'的值</c>
+<l>set_metrology_object_param (MetrologyHandle, 'all', 'measure_distance', 40)</l>
+<c>*设置测量区域矩形的半长和半宽    测量宽设为，580   测量高，设为860  那个测量区域搞大一点  </c>
+<l>set_metrology_object_param (MetrologyHandle, 'all', 'measure_length1', 16)</l>
+<l>set_metrology_object_param (MetrologyHandle, 'all', 'measure_length2', 4)</l>
+<c></c>
+<c>*设置西格玛系数，越大，唯一的边缘越清晰</c>
+<l>set_metrology_object_param (MetrologyHandle, 'all', 'measure_sigma',2)</l>
+<c>*设置阈值  相当于边缘两边的灰度差 比如边缘外侧是白色的灰度值为200，边缘是灰色的灰度160</c>
+<c>*阈值设为40以下的能找到</c>
+<l>set_metrology_object_param (MetrologyHandle, 'all', 'measure_threshold', 12)</l>
+<c></c>
+<c></c>
+<c>*测量双立方插入值，区别与bilinear双线性</c>
+<l>set_metrology_object_param (MetrologyHandle, 'all', 'measure_interpolation', 'bicubic')</l>
+<c>*取值 all first best last</c>
+<l>set_metrology_object_param (MetrologyHandle, 'all', 'measure_select', 'all')</l>
+<c></c>
+<c>*设置拟合数  这个和下面的那个分数  不太好理解，那就不单独设置其参数</c>
+<l>set_metrology_object_param (MetrologyHandle, 'all', 'num_instances', 1)</l>
+<c>*设置最小得分</c>
+<l>set_metrology_object_param (MetrologyHandle, 'all', 'min_score',0.4)</l>
+<c>*上面的那两个算子的作用大概是搞明白了，首先，那个'num_instances'表示的是拟合到的实例个数，如果不自行设置，'num_instances'=1</c>
+<c>*即会默认给出一个最佳拟合实例，如果你认为设为3，实际上匹配到几个就是几个。另外，那个最小得分就是匹配的最小置信度，如果某一条直线的匹配分数低于 MinScore，</c>
+<c>*默认情况下，get_metrology_object_result 可能只返回一个最佳匹配的对象。可以尝试修改 num_instances 以允许返回多个结果</c>
+<c>*则它不会出现在 get_metrology_object_result 里。</c>
+<c>*这两个参数，有点关联，比如你分数设高了，可能最终只有一个'num_instances'，设的低一点可能找到两个。</c>
+<l>get_metrology_object_param (MetrologyHandle, 'all', 'num_instances', num_instances)</l>
+<l>get_metrology_object_param (MetrologyHandle, 'all', 'min_score', min_score)</l>
+<c>*当你在set_metrology_object_param (MetrologyHandle, 'all', 'min_score', 0.3)和</c>
+<c>* set_metrology_object_param (MetrologyHandle, 'all', 'num_instances', 2)中设置了min_score 'num_instances'这两个</c>
+<c>*那么，在get_metrology_object_param (MetrologyHandle, 'all', 'num_instances', num_instances)</c>
+<c>*和get_metrology_object_param (MetrologyHandle, 'all', 'min_score', min_score)得到的值就是你设定的。</c>
+<c>*如果你没有设定，那么get得到的num_instances默认就是1，min_score就是实际匹配的最小分数。</c>
+<c></c>
+<c></c>
+<c>*开始找边</c>
+<l>apply_metrology_model (Image, MetrologyHandle)</l>
+<c>*获取测量区域找到的边缘坐标集合</c>
+<l>dev_set_color ('red')</l>
+<l>get_metrology_object_measures (Contours, MetrologyHandle, 'all', 'all', Row, Column)</l>
+<c></c>
+<l>stop ()</l>
+<c>*得到的点用十字显示出来</c>
+<l>gen_cross_contour_xld (CrossLine, Row, Column, 30, 0.785398)</l>
+<l>dev_set_line_width (2)</l>
+<l>dev_set_color ('green')</l>
+<l>dev_display (Image)</l>
+<l>dev_display (CrossLine)</l>
+<c></c>
+<l>get_metrology_object_indices (MetrologyHandle, Indices)</l>
+<c>*得到线的起点坐标</c>
+<l>get_metrology_object_result (MetrologyHandle, 'all', 'all', 'result_type', 'all_param', Parameter)</l>
+<l>get_metrology_object_param (MetrologyHandle, 'all', 'num_instances', num_instances)</l>
+<l>get_metrology_object_param (MetrologyHandle, 'all', 'min_score', min_score)</l>
+<l>get_metrology_object_param (MetrologyHandle, 'all', 'measure_sigma', measure_sigma)</l>
+<l>get_metrology_object_param (MetrologyHandle, 'all', 'measure_threshold', measure_threshold)</l>
+<c></c>
+<c>*得到轮廓</c>
+<l>get_metrology_object_result_contour (Contour, MetrologyHandle, 'all', 'all', 1.5)</l>
+<c></c>
+<c></c>
+<l>dev_display (Image)</l>
+<l>dev_set_color ('red')</l>
+<l>dev_display (Contour)</l>
+<c></c>
+<c></c>
+<c></c>
+<c></c>
+<c></c>
+<c></c>
+</body>
+<docu id="main">
+<parameters/>
+</docu>
+</procedure>
+<procedure name="p_disp_text_left_of_center">
+<interface>
+<ic>
+<par name="WindowHandle" base_type="ctrl" dimension="0"/>
+<par name="Text" base_type="ctrl" dimension="0"/>
+<par name="RowFirst" base_type="ctrl" dimension="0"/>
+<par name="ColFirst" base_type="ctrl" dimension="0"/>
+<par name="RowSecond" base_type="ctrl" dimension="0"/>
+<par name="ColSecond" base_type="ctrl" dimension="0"/>
+<par name="Phi" base_type="ctrl" dimension="0"/>
+<par name="Distance" base_type="ctrl" dimension="0"/>
+</ic>
+</interface>
+<body>
+<c>* Determine factors for the adaptation of the string extents that might be necessary</c>
+<c>* because of image zooming.</c>
+<l>get_part (WindowHandle, Row1Part, Column1Part, Row2Part, Column2Part)</l>
+<l>get_window_extents (WindowHandle, RowWin, ColumnWin, WidthWin, HeightWin)</l>
+<l>FactorRow := 1. * (Row2Part - Row1Part + 1) / HeightWin</l>
+<l>FactorColumn := 1. * (Column2Part - Column1Part + 1) / WidthWin</l>
+<c></c>
+<c>* Determine the extent of the string and its position.</c>
+<l>get_string_extents (WindowHandle, Text, Ascent, Descent, Width, Height)</l>
+<l>Width := Width * FactorColumn</l>
+<l>Height := Height * FactorRow</l>
+<l>RowCenter := (RowFirst + RowSecond) / 2.0</l>
+<l>ColCenter := (ColFirst + ColSecond) / 2.0</l>
+<l>if (sin(Phi) &lt; 0)</l>
+<l>    Distance := -Distance</l>
+<l>endif</l>
+<l>RowPos := RowCenter - Distance * cos(Phi)</l>
+<l>ColPos := ColCenter - Distance * sin(Phi)</l>
+<l>RowText := RowPos - Height / 2.0</l>
+<l>ColText := ColPos - Width</l>
+<c></c>
+<c>* Set the text position and color and display the text.</c>
+<l>set_tposition (WindowHandle, RowText, ColText)</l>
+<l>dev_set_color ('black')</l>
+<l>write_string (WindowHandle, Text)</l>
+<l>return ()</l>
+</body>
+<docu id="p_disp_text_left_of_center">
+<short lang="en_US">Displays text right of the center of two given points.</short>
+<short lang="zh_CN">Displays text right of the center of two given points.</short>
+<parameters>
+<parameter id="ColFirst"/>
+<parameter id="ColSecond"/>
+<parameter id="Distance"/>
+<parameter id="Phi"/>
+<parameter id="RowFirst"/>
+<parameter id="RowSecond"/>
+<parameter id="Text"/>
+<parameter id="WindowHandle"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="p_disp_dimensions">
+<interface>
+<ic>
+<par name="RowEdgeFirst" base_type="ctrl" dimension="0"/>
+<par name="ColumnEdgeFirst" base_type="ctrl" dimension="0"/>
+<par name="RowEdgeSecond" base_type="ctrl" dimension="0"/>
+<par name="ColumnEdgeSecond" base_type="ctrl" dimension="0"/>
+<par name="IntraDistance" base_type="ctrl" dimension="0"/>
+<par name="InterDistance" base_type="ctrl" dimension="0"/>
+<par name="Phi" base_type="ctrl" dimension="0"/>
+<par name="Length" base_type="ctrl" dimension="0"/>
+<par name="WindowHandle" base_type="ctrl" dimension="0"/>
+</ic>
+</interface>
+<body>
+<c>* Display markers for the edges.</c>
+<l>p_disp_edge_marker (RowEdgeFirst, ColumnEdgeFirst, Phi, Length, 'white', 2, WindowHandle)</l>
+<l>p_disp_edge_marker (RowEdgeSecond, ColumnEdgeSecond, Phi, Length, 'white', 2, WindowHandle)</l>
+<c>* Loop over all edge pairs.</c>
+<l>Number := |RowEdgeFirst|</l>
+<l>for i := 0 to Number - 1 by 1</l>
+<c></c>
+<c>    * Display the IntraDistance between the edges.</c>
+<l>    Text := IntraDistance[i]</l>
+<l>p_disp_text_right_of_center (WindowHandle, Text$'.2f', RowEdgeFirst[i], ColumnEdgeFirst[i], RowEdgeSecond[i], ColumnEdgeSecond[i], Phi, 2.0 * Length)</l>
+<l>endfor</l>
+<c></c>
+<c>* Loop to display the distance between the edge pairs.</c>
+<l>for i := 0 to Number - 2 by 1</l>
+<c></c>
+<c>    * Display the InterDistance between the edge pairs.</c>
+<l>    Text := InterDistance[i]</l>
+<l>p_disp_text_left_of_center (WindowHandle, Text$'.2f', RowEdgeSecond[i], ColumnEdgeSecond[i], RowEdgeFirst[i + 1], ColumnEdgeFirst[i + 1], Phi, 2.0 * Length)</l>
+<l>endfor</l>
+<l>return ()</l>
+</body>
+<docu id="p_disp_dimensions">
+<short lang="en_US">Displays the dimension of the measured edge pairs.</short>
+<short lang="zh_CN">Displays the dimension of the measured edge pairs.</short>
+<parameters>
+<parameter id="ColumnEdgeFirst"/>
+<parameter id="ColumnEdgeSecond"/>
+<parameter id="InterDistance"/>
+<parameter id="IntraDistance"/>
+<parameter id="Length"/>
+<parameter id="Phi"/>
+<parameter id="RowEdgeFirst"/>
+<parameter id="RowEdgeSecond"/>
+<parameter id="WindowHandle"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="p_disp_text_right_of_center">
+<interface>
+<ic>
+<par name="WindowHandle" base_type="ctrl" dimension="0"/>
+<par name="Text" base_type="ctrl" dimension="0"/>
+<par name="RowFirst" base_type="ctrl" dimension="0"/>
+<par name="ColFirst" base_type="ctrl" dimension="0"/>
+<par name="RowSecond" base_type="ctrl" dimension="0"/>
+<par name="ColSecond" base_type="ctrl" dimension="0"/>
+<par name="Phi" base_type="ctrl" dimension="0"/>
+<par name="Distance" base_type="ctrl" dimension="0"/>
+</ic>
+</interface>
+<body>
+<c>* Determine factors for the adaptation of the string extents that might be necessary</c>
+<c>* because of image zooming.</c>
+<l>get_part (WindowHandle, Row1Part, Column1Part, Row2Part, Column2Part)</l>
+<l>get_window_extents (WindowHandle, RowWin, ColumnWin, WidthWin, HeightWin)</l>
+<l>FactorRow := 1. * (Row2Part - Row1Part + 1) / HeightWin</l>
+<l>FactorColumn := 1. * (Column2Part - Column1Part + 1) / WidthWin</l>
+<c></c>
+<c>* Determine the extent of the string and its position.</c>
+<l>get_string_extents (WindowHandle, Text, Ascent, Descent, Width, Height)</l>
+<l>Width := Width * FactorColumn</l>
+<l>Height := Height * FactorRow</l>
+<l>RowCenter := (RowFirst + RowSecond) / 2.0</l>
+<l>ColCenter := (ColFirst + ColSecond) / 2.0</l>
+<l>if (sin(Phi) &lt; 0)</l>
+<l>    Distance := -Distance</l>
+<l>endif</l>
+<l>RowPos := RowCenter + Distance * cos(Phi)</l>
+<l>ColPos := ColCenter + Distance * sin(Phi)</l>
+<l>RowText := RowPos - Height / 2.0</l>
+<l>ColText := ColPos</l>
+<c></c>
+<c>* Set the text position and color and display the text.</c>
+<l>set_tposition (WindowHandle, RowText, ColText)</l>
+<l>dev_set_color ('black')</l>
+<l>write_string (WindowHandle, Text)</l>
+<l>return ()</l>
+</body>
+<docu id="p_disp_text_right_of_center">
+<short lang="en_US">Displays text right of the center of two given points.</short>
+<short lang="zh_CN">Displays text right of the center of two given points.</short>
+<parameters>
+<parameter id="ColFirst"/>
+<parameter id="ColSecond"/>
+<parameter id="Distance"/>
+<parameter id="Phi"/>
+<parameter id="RowFirst"/>
+<parameter id="RowSecond"/>
+<parameter id="Text"/>
+<parameter id="WindowHandle"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="p_disp_edge_marker">
+<interface>
+<ic>
+<par name="Rows" base_type="ctrl" dimension="0"/>
+<par name="Cols" base_type="ctrl" dimension="0"/>
+<par name="Phi" base_type="ctrl" dimension="0"/>
+<par name="Length" base_type="ctrl" dimension="0"/>
+<par name="Color" base_type="ctrl" dimension="0"/>
+<par name="LineWidth" base_type="ctrl" dimension="0"/>
+<par name="WindowHandle" base_type="ctrl" dimension="0"/>
+</ic>
+</interface>
+<body>
+<c>* Determine the number of edges</c>
+<l>NumRows := |Rows|</l>
+<l>NumCols := |Cols|</l>
+<l>Num := min([NumRows,NumCols])</l>
+<c></c>
+<c>* Loop over the edges</c>
+<l>for i := 0 to Num - 1 by 1</l>
+<l>    Row := Rows[i]</l>
+<l>    Col := Cols[i]</l>
+<c></c>
+<c>    * Determine start and end point of the edge marker.</c>
+<l>    RowStart := Row + Length * cos(Phi)</l>
+<l>    RowEnd := Row - Length * cos(Phi)</l>
+<l>    ColStart := Col + Length * sin(Phi)</l>
+<l>    ColEnd := Col - Length * sin(Phi)</l>
+<c></c>
+<c>    * Generate a contour that connects the start and end point.</c>
+<l>    gen_contour_polygon_xld (Marker, [RowStart,RowEnd], [ColStart,ColEnd])</l>
+<c></c>
+<c>    * Display the contour with  the specified style.</c>
+<l>    dev_set_color (Color)</l>
+<l>    dev_set_line_width (LineWidth)</l>
+<l>    dev_display (Marker)</l>
+<l>endfor</l>
+<l>return ()</l>
+</body>
+<docu id="p_disp_edge_marker">
+<short lang="en_US">Displays a marker, which indicates the position of an edge</short>
+<short lang="zh_CN">Displays a marker, which indicates the position of an edge</short>
+<parameters>
+<parameter id="Color"/>
+<parameter id="Cols"/>
+<parameter id="Length"/>
+<parameter id="LineWidth"/>
+<parameter id="Phi"/>
+<parameter id="Rows"/>
+<parameter id="WindowHandle"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="project_xy_to_image">
+<interface>
+<ic>
+<par name="XC1" base_type="ctrl" dimension="0"/>
+<par name="YC1" base_type="ctrl" dimension="0"/>
+<par name="MeasurementPlaneAdjusted" base_type="ctrl" dimension="0"/>
+<par name="CameraParam" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="Row1" base_type="ctrl" dimension="0"/>
+<par name="Column1" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<l>pose_to_hom_mat3d (MeasurementPlaneAdjusted, HomMat3D)</l>
+<l>affine_trans_point_3d (HomMat3D, XC1, YC1, 0 * XC1, Qx, Qy, Qz)</l>
+<l>project_3d_point (Qx, Qy, Qz, CameraParam, Row1, Column1)</l>
+<l>return ()</l>
+</body>
+<docu id="project_xy_to_image">
+<parameters>
+<parameter id="CameraParam"/>
+<parameter id="Column1"/>
+<parameter id="MeasurementPlaneAdjusted"/>
+<parameter id="Row1"/>
+<parameter id="XC1"/>
+<parameter id="YC1"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="show_contours">
+<interface>
+<io>
+<par name="Image" base_type="iconic" dimension="0"/>
+<par name="ModelContour" base_type="iconic" dimension="0"/>
+<par name="MeasureContour" base_type="iconic" dimension="0"/>
+<par name="ShapeModelContours" base_type="iconic" dimension="0"/>
+</io>
+<ic>
+<par name="WindowHandle" base_type="ctrl" dimension="0"/>
+<par name="Message" base_type="ctrl" dimension="0"/>
+</ic>
+</interface>
+<body>
+<l>dev_clear_window ()</l>
+<l>dev_display (Image)</l>
+<l>dev_set_line_width (2)</l>
+<l>dev_set_color ('blue')</l>
+<l>dev_display (ModelContour)</l>
+<l>dev_set_line_width (1)</l>
+<l>count_obj (MeasureContour, Number)</l>
+<c>* Determine if the measure contours should be shown</c>
+<l>if (Number &gt; 0)</l>
+<l>    dev_set_color ('gray')</l>
+<l>    dev_display (MeasureContour)</l>
+<l>endif</l>
+<l>count_obj (ShapeModelContours, Number)</l>
+<l>if (Number &gt; 0)</l>
+<l>    dev_set_color ('white')</l>
+<l>    dev_display (ShapeModelContours)</l>
+<l>endif</l>
+<c></c>
+<l>disp_message (WindowHandle, Message, 'window', 12, 12, 'black', 'true')</l>
+<l>disp_continue_message (WindowHandle, 'black', 'true')</l>
+<l>return ()</l>
+</body>
+<docu id="show_contours">
+<parameters>
+<parameter id="Image"/>
+<parameter id="MeasureContour"/>
+<parameter id="Message"/>
+<parameter id="ModelContour"/>
+<parameter id="ShapeModelContours"/>
+<parameter id="WindowHandle"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="extract_reference_points">
+<interface>
+<io>
+<par name="Image" base_type="iconic" dimension="0"/>
+</io>
+<oc>
+<par name="Rows" base_type="ctrl" dimension="0"/>
+<par name="Columns" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c>* Extract reference points as center points of uniquely</c>
+<c>* identifiable regions.</c>
+<l>threshold (Image, Region, 50, 255)</l>
+<l>connection (Region, ConnectedRegions)</l>
+<l>select_shape (ConnectedRegions, Rectangle, 'num_sides', 'and', 3.5, 4.5)</l>
+<l>select_shape (ConnectedRegions, Snake, 'area', 'and', 3000, 5000)</l>
+<l>select_shape (ConnectedRegions, QuarterCircles, 'area', 'and', 1000, 3000)</l>
+<l>union1 (QuarterCircles, QuarterCirclesUnion)</l>
+<l>select_shape (ConnectedRegions, Star, ['area','outer_radius','num_sides'], 'and', [7500,70,3], [10000,90,5])</l>
+<l>area_center (Star, Area1, Row1, Column1)</l>
+<l>area_center (Rectangle, Area2, Row2, Column2)</l>
+<l>area_center (Snake, Area3, Row3, Column3)</l>
+<l>area_center (QuarterCirclesUnion, Area4, Row4, Column4)</l>
+<l>Rows := [Row1,Row2,Row3,Row4]</l>
+<l>Columns := [Column1,Column2,Column3,Column4]</l>
+<l>return ()</l>
+</body>
+<docu id="extract_reference_points">
+<parameters>
+<parameter id="Columns"/>
+<parameter id="Image"/>
+<parameter id="Rows"/>
+</parameters>
+</docu>
+</procedure>
+</hdevelop>

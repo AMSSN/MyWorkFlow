@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hdevelop file_version="1.2" halcon_version="22.05.0.0">
+<procedure name="main">
+<interface/>
+<body>
+<c>*</c>
+<c>* 获取目录下所有文件（根据需要决定是否包含子目录）</c>
+<l>list_files('E:/BaiduNetdiskDownload/0177/0177-0311漏检/Splits/P4', ['files','recursive'], FileList)</l>
+<c>* 筛选出扩展名为.png的文件，存入File_image</c>
+<l>tuple_regexp_select(FileList, ['\\.png$|\\.jpg$'], File_image)</l>
+<l>for Index :=0 to |File_image|-1 by 1</l>
+<l>    read_image (Image0, File_image[Index])</l>
+<l>    parse_filename (File_image, BaseName, Extension, Directory)</l>
+<l>    get_image_size (Image0, Width, Height)</l>
+<l>    rgb1_to_gray (Image0, GrayImage)</l>
+<c>    </c>
+<c>    </c>
+<l>    threshold (GrayImage, Region, 0, 20)</l>
+<l>    smallest_circle (Region, Row, Column, Radius)</l>
+<c>    </c>
+<l>    create_metrology_model (MetrologyHandle)</l>
+<l>    set_metrology_model_param (MetrologyHandle, 'interpolation', 'bilinear')</l>
+<c>    * 参数说明：模型句柄, 圆心行, 圆心列, 半径, 卡尺宽度, 采样点数, 边缘极性, 测量方向</c>
+<l>    add_metrology_object_circle_measure (MetrologyHandle, Row, Column, Radius, 20, 5, 1, 30, [], [], Index1)</l>
+<c>    </c>
+<c>    </c>
+<l>endfor</l>
+</body>
+<docu id="main">
+<parameters/>
+</docu>
+</procedure>
+</hdevelop>
