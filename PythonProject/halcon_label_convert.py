@@ -185,20 +185,20 @@ def check_labes(img_path, label_path, save_path, mode="box"):
 
 if __name__ == '__main__':
     #
-    base_path = Path(r"E:\JingXingImage\0177\det_P2\halcon_export")
-    halconconvert = HalconConvert(mode="box", root_folder=base_path / "_labels")
+    base_path = Path(r"E:\JingXingImage\HJ_6174\P2detect\halcon_export")
+    halconconvert = HalconConvert(mode="mask", root_folder=base_path / "_labels")
     halconconvert.save_folser = base_path / "labels"
     halconconvert.gen_yolo_labels()
     # TODO 增加一个check标注内容的功能
     check_labes(img_path=base_path / "images",
                 label_path=halconconvert.save_folser,
                 save_path=base_path / "checks",
-                mode="box")
+                mode="mask")
 
     from utils.dataloaders import autosplit
 
     autosplit(
         path=base_path / "images",  # 图像目录路径
-        weights=(0.8, 0.2, 0),  # 训练、验证和测试分割比例
+        weights=(0.9, 0.1, 0),  # 训练、验证和测试分割比例
         annotated_only=False  # 是否仅划分带有标注的图像
     )

@@ -30,60 +30,69 @@ link_libraries(cudnn;cublas;cudart;nvrtc;cudadevrt;cudart_static)
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
-# 创建共享库
-add_library(Yolo26Infer SHARED
-        src/Yolo26TrtInfer.cpp
-        include/Yolo26TrtInfer.h
-        )
-# 设置C++标准
-set_target_properties(Yolo26Infer PROPERTIES
-        CXX_STANDARD 11
-        CXX_STANDARD_REQUIRED ON
-        )
-
-## 为Windows设置导出符号
-#if (WIN32)
-#    set_target_properties(Yolo26Infer PROPERTIES
-#            COMPILE_DEFINITIONS "ONNX_TO_TRT_EXPORTS"
-#            )
-#endif ()
-
-#导入OnnxToTrt
-set(ONNX_TO_TRT_DIR ${CMAKE_SOURCE_DIR}/../demo_OnnxToTrt/cmake-build-debug/OnnxToTrt)
-link_directories(${ONNX_TO_TRT_DIR}/lib)
-include_directories(${ONNX_TO_TRT_DIR}/include)
-
-## 安装头文件
-#install(TARGETS Yolo26Infer
-#        EXPORT onnx_to_trtTargets
-#        INCLUDES DESTINATION include
-#        ARCHIVE DESTINATION lib
-#        LIBRARY DESTINATION lib
-#        RUNTIME DESTINATION bin
-#        )
-
-add_executable(demo_Yolo26
-        src/Yolo26TrtInfer.cpp
-        include/Yolo26TrtInfer.h
-        main.cpp)
-
-target_link_libraries(demo_Yolo26 PRIVATE
-        Yolo26Infer
-        OnnxToTrt)
-
 # 创建测试可执行文件
 add_executable(test_main main.cpp)
 
-# 链接库文件
-target_link_libraries(test_main PRIVATE
-        Yolo5Infer
-        OnnxToTrt)
 
-# 设置输出目录
-set_target_properties(demo_Yolo26 test_main PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
-# 添加构建说明
-message(STATUS "Building YOLOv5 TensorRT demo with test support")
-message(STATUS "Main executable: demo_Yolo26")
-message(STATUS "Test executable: test_main")
+
+
+
+
+## 创建共享库
+#add_library(Yolo26Infer SHARED
+#        src/Yolo26TrtInfer.cpp
+#        include/Yolo26TrtInfer.h
+#        )
+## 设置C++标准
+#set_target_properties(Yolo26Infer PROPERTIES
+#        CXX_STANDARD 11
+#        CXX_STANDARD_REQUIRED ON
+#        )
+#
+### 为Windows设置导出符号
+##if (WIN32)
+##    set_target_properties(Yolo26Infer PROPERTIES
+##            COMPILE_DEFINITIONS "ONNX_TO_TRT_EXPORTS"
+##            )
+##endif ()
+#
+##导入OnnxToTrt
+#set(ONNX_TO_TRT_DIR ${CMAKE_SOURCE_DIR}/../demo_OnnxToTrt/cmake-build-debug/OnnxToTrt)
+#link_directories(${ONNX_TO_TRT_DIR}/lib)
+#include_directories(${ONNX_TO_TRT_DIR}/include)
+#
+### 安装头文件
+##install(TARGETS Yolo26Infer
+##        EXPORT onnx_to_trtTargets
+##        INCLUDES DESTINATION include
+##        ARCHIVE DESTINATION lib
+##        LIBRARY DESTINATION lib
+##        RUNTIME DESTINATION bin
+##        )
+#
+#add_executable(demo_Yolo26
+#        src/Yolo26TrtInfer.cpp
+#        include/Yolo26TrtInfer.h
+#        main.cpp)
+#
+#target_link_libraries(demo_Yolo26 PRIVATE
+#        Yolo26Infer
+#        OnnxToTrt)
+#
+## 创建测试可执行文件
+#add_executable(test_main main.cpp)
+#
+## 链接库文件
+#target_link_libraries(test_main PRIVATE
+#        Yolo5Infer
+#        OnnxToTrt)
+#
+## 设置输出目录
+#set_target_properties(demo_Yolo26 test_main PROPERTIES
+#        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+#
+## 添加构建说明
+#message(STATUS "Building YOLOv5 TensorRT demo with test support")
+#message(STATUS "Main executable: demo_Yolo26")
+#message(STATUS "Test executable: test_main")
