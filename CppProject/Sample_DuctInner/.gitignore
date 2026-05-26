@@ -1,0 +1,13 @@
+**/*.zip
+
+
+**/.vs
+**/.idea
+**/build
+
+out
+exe
+CMakePresets.json
+CMakeUserPresets.json
+
+

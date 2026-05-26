@@ -1,0 +1,10 @@
+__pycache__
+.vscode
+images/*.json
+temp
+ceshi_ids
+build
+dist
+output
+icons
+exe

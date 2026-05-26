@@ -1,0 +1,20 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+<qresource>
+    <file>icons/open_dir.png</file>
+    <file>icons/to_up.png</file>
+    <file>icons/to_down.png</file>
+    <file>icons/to_left.png</file>
+    <file>icons/to_right.png</file>
+    <file>icons/scale_window2.png</file>
+    <file>icons/filter.png</file>
+    <file>icons/filter2.png</file>
+    <file>icons/export.png</file>
+    <file>icons/nashi.png</file>
+    <file>icons/bk_left_arrow.png</file>
+    <file>icons/bk_right_arrow.png</file>
+    <file>icons/defect.png</file>
+    <file>icons/message.png</file>
+    <file>icons/lack.png</file>
+</qresource>
+</RCC>
