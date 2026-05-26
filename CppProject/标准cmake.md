@@ -65,23 +65,26 @@ target_link_libraries(another PUBLIC one)
 #### 汇总
 
 ```cmake
-cmake_minimum_required(VERSION 3.8)
 # 必写-最低版本
-project(Calculator LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.8)
 # 必写-项目名称
-add_library(calclib STATIC src/calclib.cpp include/calc/lib.hpp)
+project(Calculator LANGUAGES CXX)
 # 生成calclib库
-target_include_directories(calclib PUBLIC include)
+add_library(calclib STATIC src/calclib.cpp include/calc/lib.hpp)
 # calclib库包含的头文件
-target_compile_features(calclib PUBLIC cxx_std_11)
+target_include_directories(calclib PUBLIC include)
 # 设置编译版本？
-add_executable(calc apps/calc.cpp)
+target_compile_features(calclib PUBLIC cxx_std_11)
 # 生产可执行文件calc
-target_link_libraries(calc PUBLIC calclib)
+add_executable(calc apps/calc.cpp)
 # calc依赖calclib
+target_link_libraries(calc PUBLIC calclib)
+
 ```
 
 
+
+### 二、变量与缓存
 
 
 

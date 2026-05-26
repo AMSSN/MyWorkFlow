@@ -7,8 +7,8 @@ PythonProject/.idea
 **/*.pt
 **/*.onnx
 PythonProject/demo_*/*
-# 下次提交ultralytics库
-PythonProject/ultralytics
+## 下次提交ultralytics库
+#PythonProject/ultralytics
 
 
 # CppProject

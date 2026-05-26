@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-
+import threading
 import cv2
 import numpy as np
 
@@ -183,17 +183,97 @@ def check_labes(img_path, label_path, save_path, mode="box"):
             cv2.imwrite(os.path.join(save_path, filename), img)
 
 
+def rotate_image_arguement(image_path, mask_path, rotate_list=[90, 180, 270]):
+    """
+    这是一个数据增强的函数，默认使用4个线程，将image_path的图片和mask_path里对应的掩码图按中心进行旋转。
+    旋转的角度根据rotate_list确定，并修改后缀_30、_60、_90分别保存在原来的路径里。
+    :param image_path: 图像文件所在目录路径（字符串）
+    :param mask_path: 掩码文件所在目录路径（字符串）
+    :param rotate_list: 要旋转的角度列表（默认为[30, 60, 90, 120, 150, 180]）
+    :return: None
+    """
+
+    def rotate_image_and_mask(img_file, msk_file, angle):
+        # 原图像旋转逻辑
+        img = cv2.imread(os.path.join(image_path, img_file))
+        (h, w) = img.shape[:2]
+        (cX, cY) = (w // 2, h // 2)
+        # -angle位置参数为角度参数负值表示顺时针旋转; 1.0位置参数scale是调整尺寸比例（图像缩放参数），建议0.75
+        M = cv2.getRotationMatrix2D((cX, cY), -angle, 1.0)
+        # cos = np.abs(M[0, 0])
+        # sin = np.abs(M[0, 1])
+        # # compute the new bounding dimensions of the image
+        # nW = int((h * sin) + (w * cos))
+        # nH = int((h * cos) + (w * sin))
+        # # adjust the rotation matrix to take into account translation
+        # M[0, 2] += (nW / 2) - cX
+        # M[1, 2] += (nH / 2) - cY
+        img_res = cv2.warpAffine(img, M, (w, h), flags=cv2.INTER_NEAREST, borderValue=(0, 0, 0))
+        name, ext = os.path.splitext(img_file)
+        new_img_name = f"{name}_{angle}{ext}"
+        cv2.imwrite(os.path.join(image_path, new_img_name), img_res)
+
+        # 掩码图像旋转逻辑
+        msk = cv2.imread((os.path.join(mask_path, msk_file)))
+        (h, w) = msk.shape[:2]
+        (cX, cY) = (w // 2, h // 2)
+        # -angle位置参数为角度参数负值表示顺时针旋转; 1.0位置参数scale是调整尺寸比例（图像缩放参数），建议0.75
+        M = cv2.getRotationMatrix2D((cX, cY), -angle, 1.0)
+        # cos = np.abs(M[0, 0])
+        # sin = np.abs(M[0, 1])
+        # # compute the new bounding dimensions of the image
+        # nW = int((h * sin) + (w * cos))
+        # nH = int((h * cos) + (w * sin))
+        # # adjust the rotation matrix to take into account translation
+        # M[0, 2] += (nW / 2) - cX
+        # M[1, 2] += (nH / 2) - cY
+        msk_res = cv2.warpAffine(msk, M, (w, h), flags=cv2.INTER_NEAREST, borderValue=(0))
+        msk_name, msk_ext = os.path.splitext(msk_file)
+        new_img_name = f"{msk_name}_{angle}{msk_ext}"
+        cv2.imwrite(os.path.join(mask_path, new_img_name), msk_res)
+
+    def worker(files_chunk):
+        for img_file, msk_file in files_chunk:
+            for angle in rotate_list:
+                rotate_image_and_mask(img_file, msk_file, angle)
+
+    # 获取所有图像文件
+    image_files = sorted([f for f in os.listdir(image_path) if f.endswith(('.png', '.jpg', '.jpeg'))])
+    mask_files = sorted([f for f in os.listdir(mask_path) if f.endswith(('.png', '.jpg', '.jpeg'))])
+
+    # 假设图像和掩码文件一一对应
+    file_pairs = list(zip(image_files, mask_files))
+
+    # 分成4个线程的数据块
+    chunk_size = len(file_pairs) // 4 + 1
+    chunks = [file_pairs[i:i + chunk_size] for i in range(0, len(file_pairs), chunk_size)]
+
+    # 创建并启动线程
+    threads = []
+    for chunk in chunks:
+        t = threading.Thread(target=worker, args=(chunk,))
+        t.start()
+        threads.append(t)
+
+    # 等待所有线程完成
+    for t in threads:
+        t.join()
+
+
 if __name__ == '__main__':
     #
-    base_path = Path(r"E:\JingXingImage\HJ_6174\P2detect\halcon_export")
+    base_path = Path(r"E:\BJBImage\M1T56\halcon_export")
+    # 旋转图片进行数据增强
+    rotate_image_arguement(base_path / "images", base_path / "_labels", [180])
+
     halconconvert = HalconConvert(mode="mask", root_folder=base_path / "_labels")
     halconconvert.save_folser = base_path / "labels"
     halconconvert.gen_yolo_labels()
-    # TODO 增加一个check标注内容的功能
-    check_labes(img_path=base_path / "images",
-                label_path=halconconvert.save_folser,
-                save_path=base_path / "checks",
-                mode="mask")
+    # # TODO 增加一个check标注内容的功能
+    # check_labes(img_path=base_path / "images",
+    #             label_path=halconconvert.save_folser,
+    #             save_path=base_path / "checks",
+    #             mode="mask")
 
     from utils.dataloaders import autosplit
 
