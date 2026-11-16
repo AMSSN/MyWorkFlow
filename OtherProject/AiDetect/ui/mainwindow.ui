@@ -6,15 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>929</width>
-    <height>667</height>
+    <width>708</width>
+    <height>534</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QHBoxLayout" name="horizontalLayout" stretch="3,1,16">
+   <layout class="QHBoxLayout" name="horizontalLayout">
     <item>
      <layout class="QVBoxLayout" name="verticalLayout">
       <item>
@@ -25,73 +25,37 @@
        </widget>
       </item>
       <item>
-       <widget class="QTreeWidget" name="treeWidget_guide">
-        <column>
-         <property name="text">
-          <string>AI检测系统</string>
-         </property>
-        </column>
-        <item>
-         <property name="text">
-          <string>主页</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>报表</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>参数配置</string>
-         </property>
-         <item>
-          <property name="text">
-           <string>相机配置</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>算法配方</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>网络配置</string>
-          </property>
-         </item>
-        </item>
+       <widget class="QToolButton" name="toolButton">
+        <property name="text">
+         <string>主页</string>
+        </property>
        </widget>
       </item>
-     </layout>
-    </item>
-    <item>
-     <layout class="QVBoxLayout" name="verticalLayout_2">
-      <property name="spacing">
-       <number>0</number>
-      </property>
       <item>
-       <widget class="QPushButton" name="pushButton_fold">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>20</width>
-          <height>20</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>50</width>
-          <height>20</height>
-         </size>
-        </property>
+       <widget class="QToolButton" name="toolButton_2">
         <property name="text">
-         <string>Fold</string>
+         <string>报表</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QToolButton" name="toolButton_3">
+        <property name="text">
+         <string>相机设置</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QToolButton" name="toolButton_4">
+        <property name="text">
+         <string>算法配方</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QToolButton" name="toolButton_5">
+        <property name="text">
+         <string>网络设置</string>
         </property>
        </widget>
       </item>
@@ -103,7 +67,7 @@
         <property name="sizeHint" stdset="0">
          <size>
           <width>20</width>
-          <height>20</height>
+          <height>40</height>
          </size>
         </property>
        </spacer>
@@ -129,7 +93,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>929</width>
+     <width>708</width>
      <height>21</height>
     </rect>
    </property>

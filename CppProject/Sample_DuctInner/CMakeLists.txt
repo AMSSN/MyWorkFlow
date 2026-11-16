@@ -53,6 +53,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 file(GLOB BaseFiles ${CMAKE_SOURCE_DIR}/src/base/*.h ${CMAKE_SOURCE_DIR}/src/base/*.cpp)
 file(GLOB CameraFiles ${CMAKE_SOURCE_DIR}/src/camera/*.h ${CMAKE_SOURCE_DIR}/src/camera/*.cpp)
 file(GLOB PageFiles ${CMAKE_SOURCE_DIR}/src/page/*.h ${CMAKE_SOURCE_DIR}/src/page/*.cpp)
+file(GLOB AlgFiles ${CMAKE_SOURCE_DIR}/src/algorithm/*.h ${CMAKE_SOURCE_DIR}/src/algorithm/*.cpp)
 file(GLOB UIFiles ${CMAKE_SOURCE_DIR}/ui/*.ui)
 
 
@@ -64,6 +65,7 @@ qt_add_executable(DuctInner
                     ${BaseFiles} 
                     ${CameraFiles} 
                     ${PageFiles} 
+                    ${AlgFiles} 
                     ${UIFiles} )
 
 target_link_libraries(DuctInner PRIVATE Qt${QT_VERSION_MAJOR}::Widgets

@@ -9,7 +9,30 @@ MainController::MainController(QMainWindow* parent) : QMainWindow(parent), ui(ne
 	//读取配置文件
 	load_config_file("./config.json");
 	camThread = new OpencvThreadedCamera(0, this); // 使用默认摄像头
-	
+	// 检测模型初始化
+	// -------- model1 --------
+	cfm.model_path = config_global.model_path;
+	cfm.infer_size = config_global.infer_size;
+	cfm.postproc_type = config_global.postprocess_type;
+	cfm.conf_threshold = config_global.conf;
+	cfm.nms_threshold = 0.3;
+	cfm.batch_size = 1;
+	spdlog::info("YoloDetecter path = {}", cfm.model_path);
+	// 1 for fp16 , 2 for int8;
+	int ret = generate_engine_model(cfm.model_path, cfm.batch_size, cfm.infer_size, 1);
+	if (0 != ret)
+	{
+		spdlog::error("!!!!!!!!-YoloDetecter generate engine model failed!");
+	}
+	this->yolodet = new YOLODetector();
+	ret = this->yolodet->model_init(cfm.model_path, 0);
+	if (0 != ret)
+	{
+		spdlog::error("!!!!!!!!-YoloDetecter not initialized!");
+	}
+	spdlog::info("########-YoloDetecter was initialized.");
+
+
 	//load_configfile("GlobalConfig.json"); // 加载全局配置文件
 	//// 检测类
 	//beadDetector = new M_BeadDetect();
@@ -59,7 +82,7 @@ void MainController::beautifyUI() {
 	// 图标和logo
 	setWindowTitle("内壁检测系统 v1.0");
 	setWindowIcon(QIcon("./resources/LeiLei.ico"));
-	QPixmap pixmap("./resources/LeiLei_logo.png");
+	QPixmap pixmap("./resources/slogan.png");
 	ui->label_logo->setPixmap(pixmap.scaled(200, 72, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 	// 启动按钮
 	ui->pushButton_start->setText("启动");

@@ -4,8 +4,10 @@
 	"frame_gap":50,
 	"model":{
 		"model_path":"./best.engine",
-		"confidence":0.6
+		"confidence":0.6,
+		"infer_size":640,
+		"postprocess_type":2
 	},
-	"last_update":"0520"
+	"last_update":"0610"
 
 }

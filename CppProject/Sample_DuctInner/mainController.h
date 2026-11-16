@@ -12,6 +12,7 @@
 #include <QRandomGenerator>
 #include "src/base/utils.h"
 #include "src/camera/CVCameraThread.h"
+#include "src/algorithm/yolodet.h"
 // extern std::string InputMode;
 // extern int PictureNum;
 
@@ -39,7 +40,8 @@ signals:
 private:
     //void setQSS();
     Ui::MainWindow* ui;
-
+    ConfigModel cfm;
+    YOLODetector* yolodet;
 
 private slots:
     void start_detect();

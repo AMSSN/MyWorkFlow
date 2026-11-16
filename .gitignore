@@ -20,4 +20,4 @@ CppProject/*/cmake-build-debug
 **/.idea
 **/build
 
-
+**/*.dll

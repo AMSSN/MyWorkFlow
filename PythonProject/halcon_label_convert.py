@@ -194,43 +194,58 @@ def rotate_image_arguement(image_path, mask_path, rotate_list=[90, 180, 270]):
     """
 
     def rotate_image_and_mask(img_file, msk_file, angle):
-        # 原图像旋转逻辑
+        # 读取图像和掩码
         img = cv2.imread(os.path.join(image_path, img_file))
-        (h, w) = img.shape[:2]
-        (cX, cY) = (w // 2, h // 2)
-        # -angle位置参数为角度参数负值表示顺时针旋转; 1.0位置参数scale是调整尺寸比例（图像缩放参数），建议0.75
-        M = cv2.getRotationMatrix2D((cX, cY), -angle, 1.0)
-        # cos = np.abs(M[0, 0])
-        # sin = np.abs(M[0, 1])
-        # # compute the new bounding dimensions of the image
-        # nW = int((h * sin) + (w * cos))
-        # nH = int((h * cos) + (w * sin))
-        # # adjust the rotation matrix to take into account translation
-        # M[0, 2] += (nW / 2) - cX
-        # M[1, 2] += (nH / 2) - cY
-        img_res = cv2.warpAffine(img, M, (w, h), flags=cv2.INTER_NEAREST, borderValue=(0, 0, 0))
-        name, ext = os.path.splitext(img_file)
-        new_img_name = f"{name}_{angle}{ext}"
-        cv2.imwrite(os.path.join(image_path, new_img_name), img_res)
+        msk = cv2.imread(os.path.join(mask_path, msk_file))
 
-        # 掩码图像旋转逻辑
-        msk = cv2.imread((os.path.join(mask_path, msk_file)))
-        (h, w) = msk.shape[:2]
-        (cX, cY) = (w // 2, h // 2)
-        # -angle位置参数为角度参数负值表示顺时针旋转; 1.0位置参数scale是调整尺寸比例（图像缩放参数），建议0.75
-        M = cv2.getRotationMatrix2D((cX, cY), -angle, 1.0)
-        # cos = np.abs(M[0, 0])
-        # sin = np.abs(M[0, 1])
-        # # compute the new bounding dimensions of the image
-        # nW = int((h * sin) + (w * cos))
-        # nH = int((h * cos) + (w * sin))
-        # # adjust the rotation matrix to take into account translation
-        # M[0, 2] += (nW / 2) - cX
-        # M[1, 2] += (nH / 2) - cY
-        msk_res = cv2.warpAffine(msk, M, (w, h), flags=cv2.INTER_NEAREST, borderValue=(0))
+        h, w = img.shape[:2]
+        name, ext = os.path.splitext(img_file)
         msk_name, msk_ext = os.path.splitext(msk_file)
-        new_img_name = f"{msk_name}_{angle}{msk_ext}"
-        cv2.imwrite(os.path.join(mask_path, new_img_name), msk_res)
+
+        if angle == -90:
+            # 垂直镜像（上下翻转）
+            img_res = cv2.flip(img, 0)
+            msk_res = cv2.flip(msk, 0)
+            suffix = "_vflip"
+        elif angle == -180:
+            # 水平镜像（左右翻转）
+            img_res = cv2.flip(img, 1)
+            msk_res = cv2.flip(msk, 1)
+            suffix = "_hflip"
+        else:
+            # 原有旋转逻辑（中心旋转）
+            (cX, cY) = (w // 2, h // 2)
+            M = cv2.getRotationMatrix2D((cX, cY), -angle, 1.0)
+            img_res = cv2.warpAffine(img, M, (w, h), flags=cv2.INTER_NEAREST, borderValue=(0, 0, 0))
+            msk_res = cv2.warpAffine(msk, M, (w, h), flags=cv2.INTER_NEAREST, borderValue=(0))
+            suffix = f"_{angle}"
+
+        # 保存结果
+        cv2.imwrite(os.path.join(image_path, f"{name}{suffix}{ext}"), img_res)
+        cv2.imwrite(os.path.join(mask_path, f"{msk_name}{suffix}{msk_ext}"), msk_res)
+
+    # def rotate_image_and_mask(img_file, msk_file, angle):
+    #     # 原图像旋转逻辑
+    #     img = cv2.imread(os.path.join(image_path, img_file))
+    #     (h, w) = img.shape[:2]
+    #     (cX, cY) = (w // 2, h // 2)
+    #     # -angle位置参数为角度参数负值表示顺时针旋转; 1.0位置参数scale是调整尺寸比例（图像缩放参数），建议0.75
+    #     M = cv2.getRotationMatrix2D((cX, cY), -angle, 1.0)
+    #     img_res = cv2.warpAffine(img, M, (w, h), flags=cv2.INTER_NEAREST, borderValue=(0, 0, 0))
+    #     name, ext = os.path.splitext(img_file)
+    #     new_img_name = f"{name}_{angle}{ext}"
+    #     cv2.imwrite(os.path.join(image_path, new_img_name), img_res)
+    #
+    #     # 掩码图像旋转逻辑
+    #     msk = cv2.imread((os.path.join(mask_path, msk_file)))
+    #     (h, w) = msk.shape[:2]
+    #     (cX, cY) = (w // 2, h // 2)
+    #     # -angle位置参数为角度参数负值表示顺时针旋转; 1.0位置参数scale是调整尺寸比例（图像缩放参数），建议0.75
+    #     M = cv2.getRotationMatrix2D((cX, cY), -angle, 1.0)
+    #     msk_res = cv2.warpAffine(msk, M, (w, h), flags=cv2.INTER_NEAREST, borderValue=(0))
+    #     msk_name, msk_ext = os.path.splitext(msk_file)
+    #     new_img_name = f"{msk_name}_{angle}{msk_ext}"
+    #     cv2.imwrite(os.path.join(mask_path, new_img_name), msk_res)
 
     def worker(files_chunk):
         for img_file, msk_file in files_chunk:
@@ -262,21 +277,25 @@ def rotate_image_arguement(image_path, mask_path, rotate_list=[90, 180, 270]):
 
 if __name__ == '__main__':
     #
-    base_path = Path(r"E:\BJBImage\M1T56\halcon_export")
-    # 旋转图片进行数据增强
-    rotate_image_arguement(base_path / "images", base_path / "_labels", [180])
+    base_path = Path(r"E:\BJBImage\M1T910\halcon_export")
 
+    # 旋转图片进行数据增强  -180表示镜像
+    rotate_image_arguement(base_path / "images", base_path / "_labels", [180, -180])
+
+    # 转标签
     halconconvert = HalconConvert(mode="mask", root_folder=base_path / "_labels")
     halconconvert.save_folser = base_path / "labels"
     halconconvert.gen_yolo_labels()
-    # # TODO 增加一个check标注内容的功能
+
+
+    # # check标注内容
     # check_labes(img_path=base_path / "images",
     #             label_path=halconconvert.save_folser,
     #             save_path=base_path / "checks",
     #             mode="mask")
 
+    # split
     from utils.dataloaders import autosplit
-
     autosplit(
         path=base_path / "images",  # 图像目录路径
         weights=(0.9, 0.1, 0),  # 训练、验证和测试分割比例
