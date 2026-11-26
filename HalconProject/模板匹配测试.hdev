@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hdevelop file_version="1.2" halcon_version="22.05.0.0">
+<procedure name="main">
+<interface/>
+<body>
+<c>*制作模板</c>
+<l>* read_image (Image, 'D:/FA_/0813_src_20x/9.bmp')</l>
+<l>* rgb1_to_gray (Image, GrayImage)</l>
+<l>* get_image_size (Image, Width, Height)</l>
+<l>* median_image (GrayImage, ImageMedian, 'circle', 5, 'mirrored')</l>
+<l>* gen_rectangle2 (ROI_0, 1839.91, 1915.74, rad(86.688), 381.715, 384.407)</l>
+<l>* reduce_domain (ImageMedian, ROI_0, ImageReduced)</l>
+<l>* crop_domain (ImageReduced, ImagePart)</l>
+<c>* 根据图片自动确定参数</c>
+<l>* determine_shape_model_params (ImagePart, 'auto', rad(0), rad(360), 0.9, 1.1, 'auto', 'ignore_local_polarity', 'auto', 'auto', 'all', ParameterName, ParameterValue)</l>
+<l>* create_ncc_model (ImagePart, 5, rad(0), rad(360), 'auto', 'ignore_global_polarity', ModelID)</l>
+<l>* get_ncc_model_region (ModelRegion, ModelID)</l>
+<l>* write_ncc_model (ModelID, 'D:/FA_/test.ncm')</l>
+<l>* create_scaled_shape_model (ImagePart, 5,  rad(0), rad(360), rad(30), 0.8, 1.2, 'auto', 'auto', 'ignore_global_polarity', 'auto', 'auto', ModelID)</l>
+<l>* write_shape_model (ModelID, 'D:/FA_/template.shm')</l>
+<c>*设置原点，显示轮廓</c>
+<l>* area_center (ROI_0, Area, Row, Column)</l>
+<l>* set_shape_model_origin (ModelID, -Row, -Column)</l>
+<l>* get_shape_model_contours (ModelXLD, ModelID, 1)</l>
+<c></c>
+<c></c>
+<c>    </c>
+<c>    </c>
+<l>read_shape_model ('D:/FA_/template.shm', ModelID)</l>
+<l>list_image_files ('D:/FA_/0813_src_20x', 'default', [], ImageFiles)</l>
+<l>for Index := 1 to |ImageFiles|-1 by 1</l>
+<l>    read_image (Image, ImageFiles[Index])</l>
+<l>    rgb1_to_gray (Image, GrayImage)</l>
+<l>    get_image_size (GrayImage, Width, Height)</l>
+<l>    median_image (GrayImage, ImageMedian, 'circle', 5, 'mirrored')</l>
+<c></c>
+<c>    * </c>
+<c>    * Matching 02: Find the model</c>
+<l>*     find_ncc_model (ImageMedian, ModelID, rad(0), rad(360), 0.8, 0, 0.5, 'true', 0, Row, Column, Angle, Score)</l>
+<l>    find_shape_models (ImageMedian, ModelID, rad(0), rad(360), 0.1, 10, 0.5, 'none', 5, 0.9, Row, Column, Angle, Score, Model)</l>
+<c>    * </c>
+<c>    * Matching 02: Display the centers of the matches in the detected positions</c>
+<l>    for I := 0 to |Score| - 1 by 1</l>
+<l>        if (Score[I]&gt;0.1)</l>
+<l>            gen_circle (Circle, Row[I], Column[I], 50)</l>
+<l>            paint_region (Circle, Image, Image, [255,0,0], 'fill')</l>
+<l>        endif</l>
+<l>    endfor</l>
+<l>endfor</l>
+<c></c>
+<c></c>
+<c></c>
+</body>
+<docu id="main">
+<parameters/>
+</docu>
+</procedure>
+<procedure name="find_ncc_point">
+<interface>
+<io>
+<par name="Image" base_type="iconic" dimension="0"/>
+</io>
+</interface>
+<body>
+<l>read_ncc_model ('C:/Users/ming/Desktop/1.ncm', ModelID)</l>
+<c>* 最小得分设为0.8 最大目标检测数目设为1</c>
+<l>find_ncc_model (Image, ModelID, rad(0), rad(360), 0.8, 1, 0.5, 'true', 5, Row, Column, Angle, Score)</l>
+<l>dev_display (Image)</l>
+<l>for I := 0 to |Score| - 1 by 1</l>
+<c>    * Matching 04: Display the center of the match</c>
+<l>    gen_cross_contour_xld (TransContours, Row[I], Column[I], 50, Angle)</l>
+<l>    dev_set_color ('red')</l>
+<l>    dev_display (TransContours)</l>
+<l>    stop ()</l>
+<l>endfor</l>
+<l>return ()</l>
+</body>
+<docu id="find_ncc_point">
+<parameters>
+<parameter id="Image"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="gen_ncc">
+<interface>
+<io>
+<par name="Image" base_type="iconic" dimension="0"/>
+<par name="ModelRegion" base_type="iconic" dimension="0"/>
+</io>
+</interface>
+<body>
+<l>reduce_domain (Image, ModelRegion, TemplateImage)</l>
+<l>create_ncc_model (TemplateImage, 'auto', rad(0), rad(360), 'auto', 'use_polarity', ModelID)</l>
+<l>area_center (ModelRegion, ModelRegionArea, RefRow, RefColumn)</l>
+<l>write_ncc_model (ModelID, 'C:/Users/ming/Desktop/1.ncm')</l>
+<l>return ()</l>
+</body>
+<docu id="gen_ncc">
+<parameters>
+<parameter id="Image"/>
+<parameter id="ModelRegion"/>
+</parameters>
+</docu>
+</procedure>
+</hdevelop>

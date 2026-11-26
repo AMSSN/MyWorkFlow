@@ -15,9 +15,9 @@ import os
 import shutil
 
 # ========================= 配置区（自己改这里） =========================
-SRC_DIR = r"E:\BJBImage\Data\2026.11.6\11.6-MDB41-A跑量后\src"    # 被搜索的源目录（可嵌套）
-RES_DIR = r"E:\BJBImage\Data\2026.11.6\11.6-MDB41-A跑量后\Res"    # 提供参考文件名的目录（可嵌套）
-FIND_DIR = r"E:\BJBImage\Data\2026.11.6\finded"  # 输出目录
+SRC_DIR = r"E:\BJBImage\Data\2026.11.18\11.18-MDB41-APLH\src"    # 被搜索的源目录（可嵌套）
+RES_DIR = r"E:\BJBImage\Data\2026.11.18\11.18-MDB41-APLH\Res"    # 提供参考文件名的目录（可嵌套）
+FIND_DIR = r"E:\BJBImage\Data\2026.11.18\11.18-MDB41-APLH"  # 输出目录
 
 # Res 的匹配方式：
 #   False -> 仅按“文件名(含扩展名)”匹配（不管 Res 内部怎么嵌套）

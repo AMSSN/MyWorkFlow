@@ -1,28 +1,20 @@
-import cv2
 import os
-import numpy as np
 import shutil
 from pathlib import Path
 
-
-
-# def depth_fusion(imgs):
-#     """基础景深融合实现"""
-#     # 1. 计算清晰度图（拉普拉斯，基于灰度亮度）
-#     laplacians = [np.abs(cv2.Laplacian(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), cv2.CV_64F)) for img in imgs]
-#     # 2. 归一化权重图
-#     weights_sum = np.sum(laplacians, axis=0)
-#     weights_sum[weights_sum == 0] = 1e-5  # 避免除零
-#     normalized_weights = [w / weights_sum for w in laplacians]
-#     # 3. 加权融合
-#     result = np.zeros_like(imgs[0], dtype=np.float32)
-#     for img, weight in zip(imgs, normalized_weights):
-#         result += img * weight[..., None]  # (H,W,1) 广播到 (H,W,3)
-#     return result.astype(np.uint8)
-
-
 if __name__ == '__main__':
-
-
-    pass
+    img_path = r"E:\FAU\1102_feipai\20261120"
+    # 1、新建文件夹
+    img_path = Path(img_path)
+    feipai_path = img_path.parent
+    print(feipai_path)
+    folder_name = 11200000
+    for file in img_path.iterdir():
+        folder_name+=1
+        print(file)
+        folder_path = feipai_path/str(folder_name)
+        if not os.path.isdir(folder_path):
+            os.makedirs(folder_path)
+        shutil.copy2(file, folder_path)
+        os.rename(os.path.join(folder_path,file.name), os.path.join(folder_path,str(folder_name)+"_P0_I0.jpg"))
 

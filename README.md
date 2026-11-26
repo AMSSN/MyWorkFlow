@@ -13,7 +13,7 @@ https://mirror.nju.edu.cn/pytorch/whl/cu126
 
 
 
-yolov5的环境：
+yolov5的环境：必须换 Python 3.10/3.11
 pip install torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 -f https://mirrors.aliyun.com/pytorch-wheels/cu117
 
 

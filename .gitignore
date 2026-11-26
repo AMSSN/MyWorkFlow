@@ -1,7 +1,19 @@
 **/*.zip
+# CppProject系列-------------
+CppProject/3rdparty
+CppProject/*/build
+CppProject/*/cmake-build-debug
+**/.vs
+**/.idea
+**/build
+**/*.dll
+--------------------------------
+# HalconProject系列
+
+# OtherProject系列
 
 
-# PythonProject
+# PythonProject系列
 PythonProject/.idea
 **/*.pyc
 **/*.pt
@@ -11,13 +23,4 @@ PythonProject/demo_*/*
 #PythonProject/ultralytics
 
 
-# CppProject
-CppProject/3rdparty
-CppProject/3rdparty(other version)
-CppProject/*/build
-CppProject/*/cmake-build-debug
-**/.vs
-**/.idea
-**/build
 
-**/*.dll

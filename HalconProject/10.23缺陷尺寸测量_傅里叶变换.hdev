@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hdevelop file_version="1.2" halcon_version="22.05.0.0">
+<procedure name="main">
+<interface/>
+<body>
+<c></c>
+<c></c>
+<l>* read_image (ImageBlank, 'E:/光讯/10.10/玻璃盖板/Pic_2026_10_10_154647_55.jpeg')</l>
+<l>* get_image_size (ImageBlank, Width, Height)</l>
+<l>* gen_image_const (ImageM, 'byte', Width, Height)</l>
+<l>* add_image (ImageM, ImageM, ImageM, 1, 200)</l>
+<l>* sub_image (ImageM, ImageBlank, ImageStandMask, 0.6, 0)</l>
+<c></c>
+<c></c>
+<l>list_image_files ('E:/光讯/10.23/玻璃芯片', 'default', [], ImageFiles)</l>
+<c></c>
+<l>for Index := 0 to |ImageFiles|-1 by 1</l>
+<l>    parse_filename (ImageFiles[Index], BaseName, Extension, Directory)</l>
+<l>    read_image (Image, ImageFiles[Index])</l>
+<l>    get_image_size (Image, Width, Height)</l>
+<c>    *创建一个高斯滤波器，用于将傅里叶转换后的图像进行滤波</c>
+<l>    gen_gauss_filter (GaussFilter, 5.0, 5.0, 0.0, 'none', 'rft', Width, Height)</l>
+<l>    rgb1_to_gray (Image, ImageGray)</l>
+<l>*     invert_image (ImageGray, ImageInvert)</l>
+<l>    rft_generic (ImageGray, ImageFFT, 'to_freq', 'none', 'complex', Width)</l>
+<l>    convol_fft (ImageFFT, GaussFilter, ImageConvol)</l>
+<l>    rft_generic (ImageConvol, ImageFiltered, 'from_freq', 'n', 'byte', Width)</l>
+<c></c>
+<l>    threshold (ImageFiltered, Region, 0, 200)</l>
+<l>*     mult_image (ImageFiltered, ImageFiltered, ImageResult, 0.005, 0)</l>
+<l>*     auto_threshold (ImageFiltered, Regions, 1)</l>
+<c></c>
+<c>    * 测量</c>
+<l>    connection (Region, ConnectedRegions)</l>
+<l>    count_obj (ConnectedRegions, Number)</l>
+<l>    for Index1 := 1 to Number by 1</l>
+<l>        select_obj (ConnectedRegions, ObjectSelected, Index1)</l>
+<l>        region_features (ObjectSelected, 'area', ValueArea)</l>
+<l>        region_features (ObjectSelected, 'rect2_len1', ValueLengthHalf)</l>
+<l>        region_features (ObjectSelected, 'rect2_len2', ValueWidthHalf)</l>
+<l>        region_features (ObjectSelected, 'width', ValueWidth)</l>
+<l>        region_features (ObjectSelected, 'height', ValueHeight)</l>
+<c>        * 晶圆使用的是10X的镜头，单像素精度是0.345μm</c>
+<c>        * 玻璃盖板和芯片使用的是20X的镜头，单像素精度是0.18μm</c>
+<l>        width:=ValueWidth*0.18</l>
+<l>        height:=ValueHeight*0.18</l>
+<l>        area:=ValueArea*0.18</l>
+<l>        paint_region (ObjectSelected, Image, Image,[255,0,0], 'margin')</l>
+<c>        </c>
+<c>        </c>
+<l>    endfor</l>
+<c>    </c>
+<c></c>
+<c>    </c>
+<c></c>
+<c>    </c>
+<c>    </c>
+<l>endfor</l>
+</body>
+<docu id="main">
+<parameters/>
+</docu>
+</procedure>
+</hdevelop>

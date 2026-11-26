@@ -12,6 +12,10 @@ class HobjLoader(QThread):
         self.img_ids = img_ids
         self.mesg_ids = mesg_ids
         self.hobj_direct_name = hobj_direct_name
+        self._stopped = False
+
+    def stop(self):
+        self._stopped = True
 
     def run(self):
         try:
@@ -19,6 +23,8 @@ class HobjLoader(QThread):
                 return
 
             for ind, img_id in enumerate(self.img_ids):
+                if self._stopped:
+                    break
                 direct_path = osp.join(self.img_root, img_id)
                 filenames = os.listdir(direct_path)
                 imgnames = filter_filename_by_extension(filenames, [".jpg", ".bmp"])
@@ -187,7 +193,7 @@ class IdListBoard(QWidget):
 
         self.widget_labelIds = QWidget(self)
         layout_labelIds = QHBoxLayout()
-        self.label_ids = QLabel("镜片列表", self)
+        self.label_ids = QLabel("样本列表", self)
         self.label_ids.setFixedSize(60, 30)
         self.label_ids.setStyleSheet("font-size:15px")
         self.label_hobjName = QLabel("", self)
@@ -360,6 +366,8 @@ class IdListBoard(QWidget):
 
     def highLightListWidgetId(self, light_flag):
         item = self.listWidget_ids.currentItem()
+        if item is None:
+            return
         item.setData(Qt.UserRole + 4, light_flag)
         # self.listWidget_ids.update()
 
@@ -370,7 +378,7 @@ class IdListBoard(QWidget):
         self.hobj_thread.quit()
 
         total_num, defect_num = self.statisticDefectNum()
-        defect_text = f"镜片总数: {total_num} 缺陷样本: {defect_num}"
+        defect_text = f"样本总数: {total_num} 缺陷样本: {defect_num}"
         self.parent.label_statusDefect.setText(defect_text)
 
     def statisticDefectNum(self):

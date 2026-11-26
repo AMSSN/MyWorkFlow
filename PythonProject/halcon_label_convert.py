@@ -277,10 +277,10 @@ def rotate_image_arguement(image_path, mask_path, rotate_list=[90, 180, 270]):
 
 if __name__ == '__main__':
     #
-    base_path = Path(r"E:\BJBImage\M1T910\halcon_export")
+    base_path = Path(r"D:\FA_\data\LocateP4DM\halcon_export")
 
     # 旋转图片进行数据增强  -180表示镜像
-    rotate_image_arguement(base_path / "images", base_path / "_labels", [180, -180])
+    rotate_image_arguement(base_path / "images", base_path / "_labels", [90, 180, 270 -180])
 
     # 转标签
     halconconvert = HalconConvert(mode="mask", root_folder=base_path / "_labels")

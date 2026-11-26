@@ -6,68 +6,98 @@ from utils import *
 
 here = osp.dirname(osp.abspath(__file__))
 
-# 设备检测出来的标签和算法出来的32个标签一致
+# 设备检测出来的标签和算法库(ALGNUM=40)的40个标签一致，索引 0~39
 EQUIP_DEFECT_TYPES = [
-    "掉墨",
-    "伤痕",
-    "亮线",
-    "裂边",
-    "膜欠",
-    "墨渣",
-    "脱膜",
-    "外径倒影",
-    "芯裂",
-    "油点",
-    "脏污",
-    "墨淡",
-    "端面不良",
-    "欠涂",
-    "毛边",
-    "透光伤",
-    "压克",
-    "吸笔印",
-    "膜色不良",
-    "异物",
-    "洗伤",
-    "斑孔",
-    "材料不良",
-    "溢墨",
-    "积墨",
-    "砂目",
-    "夹伤",
-    "亮点",
-    "亮痕",
-    "未知缺陷1",
-    "尺寸错误",
-    "镜片跳出",
+    "划痕",        # 0
+    "压伤",        # 1
+    "碰伤",        # 2
+    "凹印",        # 3
+    "砂纸痕",      # 4
+    "亮印",        # 5
+    "线痕",        # 6
+    "脏污",        # 7
+    "异色点",      # 8
+    "笔印",        # 9
+    "凹痕",        # 10
+    "过磨",        # 11
+    "材料线",      # 12
+    "杂质点",      # 13
+    "材质麻点",    # 14
+    "刀痕",        # 15
+    "吐酸",        # 16
+    "天线盖开裂",  # 17
+    "小平面",      # 18
+    "顶凸",        # 19
+    "毛边",        # 20
+    "色差",        # 21
+    "光泽",        # 22
+    "膜厚",        # 23
+    "面花",        # 24
+    "酸印",        # 25
+    "雾边",        # 26
+    "露白",        # 27
+    "氧化斑",      # 28
+    "镭雕不良",    # 29
+    "导电不良",    # 30
+    "药水结晶",    # 31
+    "流痕",        # 32
+    "拖尾",        # 33
+    "喷砂不均",    # 34
+    "喷砂亮点",    # 35
+    "脱脂末净",    # 36
+    "残胶",        # 37
+    "报废",        # 38
+    "板纹线",      # 39
 ]
+DEFECT_TYPE_NUM = len(EQUIP_DEFECT_TYPES)
+
+
+def valid_defect_index(index):
+    """返回合法的缺陷索引；越界或非整数返回 None，防止列表下标越界闪退。"""
+    try:
+        idx = int(index)
+    except (TypeError, ValueError):
+        return None
+    return idx if 0 <= idx < DEFECT_TYPE_NUM else None
+
+
+def get_defect_text(index):
+    """按缺陷索引取名称，越界时返回可读的占位文本。"""
+    idx = valid_defect_index(index)
+    if idx is None:
+        return f"未知缺陷({index})"
+    return EQUIP_DEFECT_TYPES[idx]
+
+
+def get_defect_color(index):
+    """按缺陷索引取颜色，越界时返回兜底颜色。"""
+    idx = valid_defect_index(index)
+    if idx is None or idx >= len(COLORS):
+        return COLORS[0]
+    return COLORS[idx]
 # 人工核对的标签，进行了一些精简
 MANU_DEFECT_TYPES = [
-    "斑孔",
-    "材料不良",
-    "掉墨",
-    "端面不良",
-    "积墨",
-    "夹伤",
-    "亮线",
-    "裂边",
-    "毛边",
-    "膜欠",
-    "膜色不良",
-    "墨淡",
-    "墨渣",
-    "欠涂",
-    "砂目",
+    "毛屑",
     "伤痕",
-    "透光伤",
-    "脱膜",
-    "吸笔印",
-    "洗伤",
-    "芯裂",
-    "压克",
-    "溢墨",
+    "破损",
+    "腐蚀点",
     "脏污",
-    "其他",
+    "其他未知缺陷",
+    "毛刺",
+    "腐蚀",
+    "锈迹",
+    "裂纹",
+    "裂痕",
+    "划痕",
+    "凹痕",
+    "凹坑",
+    "色差",
+    "黑笔印"
+    "未知缺陷1",
+    "未知缺陷2",
+    "未知缺陷3",
+    "未知缺陷4",
+    "未知缺陷5"
 ]
 
 
@@ -543,6 +573,14 @@ COLORS = [
     (192, 192, 192),  # 银色
     (255, 165, 0),  # 橙色2
     (165, 42, 42),  # 棕色3
+    (0, 0, 0),  # 黑色
+    (255, 192, 203),  # 粉色2
+    (0, 255, 127),  # 春绿色
+    (255, 20, 147),  # 深粉色
+    (138, 43, 226),  # 紫罗兰
+    (255, 215, 0),  # 金色
+    (70, 130, 180),  # 钢蓝色
+    (128, 64, 0),  # 棕色4
 ]
 
 
@@ -606,7 +644,7 @@ class Shape(object):
             assert False, "unsupported vertex shape"
 
     def paint(self, painter):
-        color = COLORS[self.label]
+        color = get_defect_color(self.label)
         qcolor = QColor(color[0], color[1], color[2], 128)
         pen = QPen(qcolor)
         pen.setWidth(self.PEN_WIDTH)
@@ -630,5 +668,5 @@ class Shape(object):
             painter.drawPath(line_path)
 
             pos_x, pos_y = self.getLeftTopPos()
-            text = EQUIP_DEFECT_TYPES[self.label]
+            text = get_defect_text(self.label)
             painter.drawText(int(pos_x), int(pos_y - 10), text)

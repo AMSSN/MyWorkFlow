@@ -5,13 +5,13 @@ import cv2
 import os.path as osp
 import numpy as np
 import PIL.Image
-from PIL.ImageQt import ImageQt
 import io
 import math
 import time
 import inspect
 import json
 import shutil
+import threading
 from natsort import natsorted, os_sorted
 from loguru import logger
 import halcon as ha
@@ -21,6 +21,12 @@ from PyQt5.QtGui import QImage
 current_dir = osp.abspath(os.getcwd())
 
 DEBUG = False
+
+# 算法库缺陷类型数量(ALGNUM)，需与 CustomWidgets.EQUIP_DEFECT_TYPES 保持一致
+EXPECTED_DEFECT_NUM = 40
+
+# HALCON 的 set_system / 句柄为全局状态，跨线程并发调用需串行化
+_halcon_lock = threading.Lock()
 
 VERSION_STR = "version：20260121"
 
@@ -52,6 +58,8 @@ def clip_num(x, min, max):
 
 def cycle_index(x, min, max):
     gap = max - min + 1
+    if gap <= 0:
+        return min
     if x > max:
         x -= gap
     elif x < min:
@@ -192,78 +200,91 @@ def load_image_data(imgpath):
 
 
 def image_data_qimage_pillow(image_data):
-    pil_img = PIL.Image.open(io.BytesIO(image_data))
-    if pil_img.mode != "RGB":
-        pil_img = pil_img.convert("RGB")
-    width, height = pil_img.size
-    data = pil_img.tobytes("raw", "RGB")
-    qimage = QImage(data, width, height, QImage.Format_RGB888)
-    return qimage
+    try:
+        pil_img = PIL.Image.open(io.BytesIO(image_data))
+        if pil_img.mode != "RGB":
+            pil_img = pil_img.convert("RGB")
+        width, height = pil_img.size
+        data = pil_img.tobytes("raw", "RGB")
+        # QImage 不持有 Python bytes 缓冲区的引用，需深拷贝避免悬空内存
+        qimage = QImage(data, width, height, QImage.Format_RGB888).copy()
+        return qimage
+    except Exception as e:
+        logger.error(f"image_data_qimage_pillow 解析图片失败: {str(e)}")
+        return QImage()
 
 
 def load_hobj_polygons(hobjpath):
-    ha.set_system("tsp_height", 6000)
-    ha.set_system("tsp_width", 6000)
-
     polygon_list = []
-    if not osp.exists(hobjpath):
-        logger.warning(f"hobjpath: {hobjpath} not exists!")
-        return polygon_list
+    with _halcon_lock:
+        try:
+            ha.set_system("tsp_height", 6000)
+            ha.set_system("tsp_width", 6000)
+            if not osp.exists(hobjpath):
+                logger.warning(f"hobjpath: {hobjpath} not exists!")
+                return polygon_list
 
-    DefectRegions = ha.read_object(hobjpath)
-    def_num = ha.count_obj(DefectRegions)
-    # print(def_num)
-    if def_num != 32:
-        logger.warning(f"def_num-{def_num} not equal to 32!")
-    for i in range(def_num):
-        DefectRegion = ha.select_obj(DefectRegions, i + 1)
-        DefectSelRegs = ha.connection(DefectRegion)
-        def_sel_num = ha.count_obj(DefectSelRegs)
-        TempArea, TempRow, TempCol = ha.area_center(DefectRegion)
-        if def_sel_num == 1 and TempArea[0] < 1:
-            continue
-        # print(i, def_sel_num, TempArea)
-        for j in range(def_sel_num):
-            DefSelReg = ha.select_obj(DefectSelRegs, j + 1)
-            DefSelDilReg = ha.dilation_circle(DefSelReg, 10)
-            DefSelCont = ha.gen_contour_region_xld(DefSelDilReg, "border")
-            DefSelSmoothCont = ha.smooth_contours_xld(DefSelCont, 15)
-            DefSelPolygon = ha.gen_polygons_xld(DefSelSmoothCont, "ramer", 2)
-
-            Rows, Cols, Length, Phi = ha.get_polygon_xld(DefSelPolygon)
-            point_num = ha.tuple_length(Rows)
-            points = []
-            for k in range(point_num):
-                point_x = int(Cols[k])
-                point_y = int(Rows[k])
-                point = [point_x, point_y]
-                points.append(point)
-            polygon_list.append([i, points])
+            DefectRegions = ha.read_object(hobjpath)
+            def_num = ha.count_obj(DefectRegions)
+            if def_num != EXPECTED_DEFECT_NUM:
+                logger.warning(f"def_num-{def_num} not equal to {EXPECTED_DEFECT_NUM}!")
+            for i in range(def_num):
+                if i >= EXPECTED_DEFECT_NUM:
+                    logger.warning(f"defect index {i} >= {EXPECTED_DEFECT_NUM}, skip!")
+                    continue
+                DefectRegion = ha.select_obj(DefectRegions, i + 1)
+                DefectSelRegs = ha.connection(DefectRegion)
+                def_sel_num = ha.count_obj(DefectSelRegs)
+                TempArea, TempRow, TempCol = ha.area_center(DefectRegion)
+                if def_sel_num == 1 and TempArea[0] < 1:
+                    continue
+                for j in range(def_sel_num):
+                    DefSelReg = ha.select_obj(DefectSelRegs, j + 1)
+                    DefSelDilReg = ha.dilation_circle(DefSelReg, 10)
+                    DefSelCont = ha.gen_contour_region_xld(DefSelDilReg, "border")
+                    DefSelSmoothCont = ha.smooth_contours_xld(DefSelCont, 15)
+                    DefSelPolygon = ha.gen_polygons_xld(DefSelSmoothCont, "ramer", 2)
+                    Rows, Cols, Length, Phi = ha.get_polygon_xld(DefSelPolygon)
+                    point_num = ha.tuple_length(Rows)
+                    points = []
+                    for k in range(point_num):
+                        points.append([int(Cols[k]), int(Rows[k])])
+                    polygon_list.append([i, points])
+        except Exception as e:
+            logger.error(f"load_hobj_polygons 解析 {hobjpath} 失败: {str(e)}")
+            return []
     return polygon_list
 
 
 def load_hobj_defect_index(hobjpath):
-    ha.set_system("tsp_height", 6000)
-    ha.set_system("tsp_width", 6000)
-
     defect_indexs = []
-    if not osp.exists(hobjpath):
-        logger.warning(f"hobjpath: {hobjpath} not exists!")
-        defect_indexs.append(-1)
-        return defect_indexs
+    with _halcon_lock:
+        try:
+            ha.set_system("tsp_height", 6000)
+            ha.set_system("tsp_width", 6000)
+            if not osp.exists(hobjpath):
+                logger.warning(f"hobjpath: {hobjpath} not exists!")
+                defect_indexs.append(-1)
+                return defect_indexs
 
-    DefectRegions = ha.read_object(hobjpath)
-    def_num = ha.count_obj(DefectRegions)
-    if def_num != 32:
-        logger.warning(f"def_num-{def_num} not equal to 32!")
-    for i in range(def_num):
-        DefectRegion = ha.select_obj(DefectRegions, i + 1)
-        DefectSelRegs = ha.connection(DefectRegion)
-        def_sel_num = ha.count_obj(DefectSelRegs)
-        TempArea, TempRow, TempCol = ha.area_center(DefectRegion)
-        if def_sel_num == 1 and TempArea[0] < 1:
-            continue
-        defect_indexs.append(i)
+            DefectRegions = ha.read_object(hobjpath)
+            def_num = ha.count_obj(DefectRegions)
+            if def_num != EXPECTED_DEFECT_NUM:
+                logger.warning(f"def_num-{def_num} not equal to {EXPECTED_DEFECT_NUM}!")
+            for i in range(def_num):
+                if i >= EXPECTED_DEFECT_NUM:
+                    logger.warning(f"defect index {i} >= {EXPECTED_DEFECT_NUM}, skip!")
+                    continue
+                DefectRegion = ha.select_obj(DefectRegions, i + 1)
+                DefectSelRegs = ha.connection(DefectRegion)
+                def_sel_num = ha.count_obj(DefectSelRegs)
+                TempArea, TempRow, TempCol = ha.area_center(DefectRegion)
+                if def_sel_num == 1 and TempArea[0] < 1:
+                    continue
+                defect_indexs.append(i)
+        except Exception as e:
+            logger.error(f"load_hobj_defect_index 解析 {hobjpath} 失败: {str(e)}")
+            return [-1]
     return defect_indexs
 
 

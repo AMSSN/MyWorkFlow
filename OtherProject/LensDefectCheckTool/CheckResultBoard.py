@@ -276,7 +276,7 @@ class CheckResultBoard(QWidget):
             self.label_equipOk.setStateLight()
             self.label_equipNg.setStateDark()
         else:
-            equip_defect_texts = [EQUIP_DEFECT_TYPES[i] for i in defect_indexs_sim2]
+            equip_defect_texts = [get_defect_text(i) for i in defect_indexs_sim2]
             equip_defect_texts = os_sorted(equip_defect_texts)
             self.listWidget_equipRlt.addItems(equip_defect_texts)
             self.label_equipOk.setStateDark()

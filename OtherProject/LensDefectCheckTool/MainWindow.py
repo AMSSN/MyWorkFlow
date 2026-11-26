@@ -1,3 +1,6 @@
+import sys
+import faulthandler
+
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from TabImageBox import TabImageBox
 from CheckResultBoard import CheckResultBoard
@@ -14,6 +17,10 @@ class ImageLoader(QThread):
         super().__init__()
         self.cur_direct_path = cur_direct_path
         self.imgnames = imgnames
+        self._stopped = False
+
+    def stop(self):
+        self._stopped = True
 
     def run(self):
         try:
@@ -22,6 +29,8 @@ class ImageLoader(QThread):
                 return
 
             for ind, imgname in enumerate(self.imgnames):
+                if self._stopped:
+                    break
                 imgpath = osp.join(self.cur_direct_path, imgname)
                 if not osp.exists(imgpath):
                     logger.error(f"{imgpath} is not exists!")
@@ -56,7 +65,8 @@ class MainWindow(QMainWindow):
         self.label_file = None
 
     def initUI(self):
-        self.setWindowTitle("镜片缺陷核对工具")
+        self.setWindowTitle("金属件缺陷核对工具")
+        self.setWindowIcon(QIcon("./icons/logo.ico"))
         self.setStyleSheet("QMainWindow {background-color: #d1d1d7;}")
         self.resize(1480, 900)
 
@@ -127,19 +137,19 @@ class MainWindow(QMainWindow):
         )
         act_getPrevListId = newAction(
             self,
-            self.tr("上个镜片"),
+            self.tr("上个样本"),
             self.getPrevListId,
             Qt.Key_Up,
             ":/icons/to_up.png",
-            self.tr("打开上个镜片文件夹的图片"),
+            self.tr("打开上个样本文件夹的图片"),
         )
         act_getNextListId = newAction(
             self,
-            self.tr("下个镜片"),
+            self.tr("下个样本"),
             self.getNextListId,
             Qt.Key_Down,
             ":/icons/to_down.png",
-            self.tr("打开下个镜片文件夹的图片"),
+            self.tr("打开下个样本文件夹的图片"),
         )
         act_getPrevImg = newAction(
             self,
@@ -318,12 +328,17 @@ class MainWindow(QMainWindow):
 
     def onReceiveImage(self, ind, imgname, imageData):
         logger.trace(f"onReceiveImage {ind} ...")
+        if not imageData:
+            logger.warning(f"忽略空图片数据: {imgname}")
+            return
         self.img_datas[imgname] = imageData
         if ind == 0:
             qimage = image_data_qimage_pillow(imageData)
             self.loadImage(imgname, qimage)
 
     def loadImage(self, imgname, qimage):
+        if qimage is None:
+            qimage = QImage()
         hobj_direct_name = self.settings.value("window/hobj_direct_name", "src_hobj")
 
         self.widget_main.resetState()
@@ -380,8 +395,7 @@ class MainWindow(QMainWindow):
         if self.targetDirPath == "":
             return
 
-        if self.widget_left.hobj_thread.isRunning():
-            self.widget_left.hobj_thread.terminate()
+        self._stopHobjThread()
 
         self.resetState()
 
@@ -419,8 +433,7 @@ class MainWindow(QMainWindow):
             self.widget_left.updateIdListWidgetMesg(self.prev_direct, mesg_flag)
 
         self.img_datas.clear()
-        if self.image_thread.isRunning():
-            self.image_thread.terminate()
+        self._stopImageThread()
         cur_direct_path = osp.join(self.targetDirPath, self.cur_direct)
         filenames = os.listdir(cur_direct_path)
         imgnames = filter_filename_by_extension(filenames, [".jpg", ".bmp"])
@@ -440,6 +453,8 @@ class MainWindow(QMainWindow):
                 )
             imgnames2 = []
             for i, defect_ind in enumerate(defect_indexs):
+                if i >= len(imgnames):
+                    break
                 if len(defect_ind) < 1:
                     continue
                 if defect_ind[0] == -1:
@@ -513,40 +528,35 @@ class MainWindow(QMainWindow):
     def switchSelectedListId(self):
         self.openCurrentIdDirect()
 
-    def getPrevImg(self):
-        logger.trace("getPrevImg...")
-        img_num = len(self.img_datas)
+    def _switchImage(self, step):
+        imgnames = natsorted(list(self.img_datas.keys()))
+        img_num = len(imgnames)
         if img_num < 1:
             return
-        cur_img_num = 0
-        imgnames = natsorted(list(self.img_datas.keys()))
-        # 在切换id_direct的时候，实时的计算当前已加载的图片的数量cur_img_num
-        for imgname in imgnames:
-            if self.img_datas[imgname] != bytes():
-                cur_img_num += 1
-        new_img_index = cycle_index(self.cur_img_index - 1, 0, cur_img_num - 1)
-        imgname = imgnames[new_img_index]
-        imageData = self.img_datas[imgname]
-        qimage = image_data_qimage_pillow(imageData)
-        self.cur_img_index = new_img_index
-        self.loadImage(imgname, qimage)
+        index = self.cur_img_index
+        if index < 0 or index >= img_num:
+            index = 0
+        # 索引始终基于全量图片列表，只跳过尚未加载完成的占位项
+        for _ in range(img_num):
+            index = (index + step) % img_num
+            imageData = self.img_datas.get(imgnames[index], bytes())
+            if imageData == bytes():
+                continue
+            qimage = image_data_qimage_pillow(imageData)
+            if qimage.isNull():
+                continue
+            self.cur_img_index = index
+            self.loadImage(imgnames[index], qimage)
+            return
+        logger.warning("所有图片均未加载完成，跳过翻图")
+
+    def getPrevImg(self):
+        logger.trace("getPrevImg...")
+        self._switchImage(-1)
 
     def getNextImg(self):
         logger.trace("getNextImg...")
-        img_num = len(self.img_datas)
-        if img_num < 1:
-            return
-        cur_img_num = 0
-        imgnames = natsorted(list(self.img_datas.keys()))
-        for imgname in imgnames:
-            if self.img_datas[imgname] != bytes():
-                cur_img_num += 1
-        new_img_index = cycle_index(self.cur_img_index + 1, 0, cur_img_num - 1)
-        imgname = imgnames[new_img_index]
-        imageData = self.img_datas[imgname]
-        qimage = image_data_qimage_pillow(imageData)
-        self.cur_img_index = new_img_index
-        self.loadImage(imgname, qimage)
+        self._switchImage(1)
 
     def acquireCheckBoardIdDict(self):
         logger.trace("acquireCheckBoardIdDict...")
@@ -577,8 +587,7 @@ class MainWindow(QMainWindow):
         pos_filter_flag = self.actions.act_filterPosImage.isChecked()
 
         self.img_datas.clear()
-        if self.image_thread.isRunning():
-            self.image_thread.terminate()
+        self._stopImageThread()
         cur_direct_path = osp.join(self.targetDirPath, self.cur_direct)
         filenames = os.listdir(cur_direct_path)
         imgnames = filter_filename_by_extension(filenames, [".jpg", ".bmp"])
@@ -597,6 +606,8 @@ class MainWindow(QMainWindow):
                 )
             imgnames2 = []
             for i, defect_ind in enumerate(defect_indexs):
+                if i >= len(imgnames):
+                    break
                 if len(defect_ind) < 1:
                     continue
                 if defect_ind[0] == -1:
@@ -639,8 +650,7 @@ class MainWindow(QMainWindow):
     def clearPanel(self):
         logger.trace("clearPanel...")
 
-        if self.widget_left.hobj_thread.isRunning():
-            self.widget_left.hobj_thread.terminate()
+        self._stopHobjThread()
 
         cur_check_edit_dict = self.acquireCheckBoardIdDict()
         if self.label_file is not None:
@@ -662,6 +672,32 @@ class MainWindow(QMainWindow):
             self.actions.act_filterDefectImage.setChecked(value)
             self.actions.act_filterPosImage.setChecked(value)
 
+    def _stopImageThread(self):
+        thread = getattr(self, "image_thread", None)
+        if thread is None:
+            return
+        if isinstance(thread, ImageLoader):
+            thread.stop()
+        if thread.isRunning():
+            thread.quit()
+            thread.wait(200)
+        if isinstance(thread, ImageLoader):
+            try:
+                thread.sendImage.disconnect(self.onReceiveImage)
+                thread.finishLoad.disconnect(self.onFinishLoadImages)
+            except (TypeError, RuntimeError):
+                pass
+
+    def _stopHobjThread(self):
+        thread = self.widget_left.hobj_thread
+        if thread is None:
+            return
+        if hasattr(thread, "stop"):
+            thread.stop()
+        if thread.isRunning():
+            thread.quit()
+            thread.wait(200)
+
     def resetState(self):
         self.qimage = None
         self.widget_left.resetState()
@@ -678,12 +714,20 @@ class MainWindow(QMainWindow):
         e = 0.0
         w1 = self.widget_main.scrollArea.width() - e
         h1 = self.widget_main.scrollArea.height() - e
+        if h1 <= 0:
+            return 1
         a1 = w1 / h1
-        w2 = self.widget_main.canvas.pixmap.width() - 0.0
-        h2 = self.widget_main.canvas.pixmap.height() - 0.0
-        a2 = w2 / h2
-        scale = w1 / w2 if a2 >= a1 else h1 / h2
-        return scale
+        pixmap = self.widget_main.canvas.pixmap
+        if pixmap is None or pixmap.isNull():
+            return 1
+        w2 = pixmap.width() - 0.0
+        h2 = pixmap.height() - 0.0
+        if h2 == 0:
+            return 1
+        else:
+            a2 = w2 / h2
+            scale = w1 / w2 if a2 >= a1 else h1 / h2
+            return scale
 
     def addZoom(self, increment=1.1):
         new_scale = self.scale * increment
@@ -728,7 +772,7 @@ class MainWindow(QMainWindow):
 
     def paintCanvas(self):
         # 检查图像是否为空
-        if self.qimage.isNull():
+        if self.qimage is None or self.qimage.isNull():
             # logger.warning("警告: 图像为空")
             return
 
@@ -751,7 +795,7 @@ class MainWindow(QMainWindow):
                     cur_imgname, self.cur_img_index, img_num, cur_img_size, cur_id
                 )
             except (IndexError, ValueError) as e:
-                logger.error(f"解析镜片ID时出错: {e}")
+                logger.error(f"解析样本ID时出错: {e}")
 
         self.widget_main.canvas.update()
 
@@ -811,10 +855,12 @@ class MainWindow(QMainWindow):
             logger.info(f"hobj_direct_name: {hobj_direct_name}")
             self.settings.setValue("window/hobj_direct_name", hobj_direct_name)
 
-            if self.widget_left.hobj_thread.isRunning():
-                self.widget_left.hobj_thread.terminate()
+            self._stopHobjThread()
             self.resetState()
 
+            if self.label_file is None:
+                QMessageBox.warning(self, "错误", "请先打开目录")
+                return
             mesg_ids = self.label_file.manu_check_result.keys()
             self.widget_left.initIdListBoard(self.targetDirPath, mesg_ids)
             self.toggleActions(True)
@@ -840,6 +886,9 @@ class MainWindow(QMainWindow):
         ):
             return
         imgnames = natsorted(list(self.img_datas.keys()))
+        if self.cur_img_index < 0 or self.cur_img_index >= len(imgnames):
+            logger.warning(f"cur_img_index 越界: {self.cur_img_index}")
+            return
         cur_imgname = imgnames[self.cur_img_index]
 
         pictures_path = os.path.join(os.path.expanduser("~"), "Pictures")
@@ -884,7 +933,11 @@ class MainWindow(QMainWindow):
 
         logger.trace("resizeEvent...")
         current_size = self.size()
-        if current_size != self.last_size and not self.qimage.isNull():
+        if (
+            current_size != self.last_size
+            and self.qimage is not None
+            and not self.qimage.isNull()
+        ):
             self.last_size = current_size
             self.adjustScale(force_scale=True)
             self.paintCanvas()
@@ -905,6 +958,26 @@ if __name__ == "__main__":
     else:
         log_type = "WARNING"
     init_logu(log_type)
+
+    def _log_uncaught_exception(exc_type, exc_value, exc_tb):
+        logger.exception(
+            "未捕获异常:", exc_info=(exc_type, exc_value, exc_tb)
+        )
+
+    sys.excepthook = _log_uncaught_exception
+    if sys.stderr is None:
+        # PyInstaller -w / pythonw 下无控制台，faulthandler 默认写 stderr 会抛 RuntimeError
+        try:
+            _fault_log = open(
+                osp.join(osp.expanduser("~"), "lens_faulthandler.log"),
+                "a",
+                encoding="utf-8",
+            )
+            faulthandler.enable(_fault_log)
+        except Exception:
+            pass
+    else:
+        faulthandler.enable()
 
     app = QApplication(sys.argv)
     main_window = MainWindow()
